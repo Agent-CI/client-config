@@ -16,6 +16,7 @@ from agentci.client_config.schema import (
     ConsistencyConfig,
     CustomConfig,
     EvaluationCase,
+    StringMatch,
 )
 
 
@@ -35,4 +36,5 @@ __all__ = [
     "ConsistencyConfig",
     "CustomConfig",
     "EvaluationCase",
+    "StringMatch",
 ]

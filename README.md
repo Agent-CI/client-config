@@ -30,7 +30,7 @@ iterations = 1                             # Integer: Number of times to execute
 [[eval.cases]]
 prompt = "Test prompt"                     # Optional: Input prompt string (for agents)
 context = { param1 = "value1" }           # Optional: Context object (agent context or tool parameters)
-output = "{{*}}expected{{*}}"              # Expected output with wildcard matching
+output = "expected"                        # Expected output (exact match by default)
 ```
 
 ## Evaluation Types
@@ -46,20 +46,41 @@ type = "accuracy"
 targets.agents = ["*"]
 targets.tools = []
 
-# Exact string match (no wildcards)
+# Exact string match
+# Bare string is interpreted as `{ exact = "..." }`
 [[eval.cases]]
 prompt = "What is 2+2?"
 output = "4"
 
-# Substring containment (case-insensitive by default)
+# Substring containment
+# can use 'includes' as alias
 [[eval.cases]]
 prompt = "What is the capital of France?"
-output = "{{*}}Paris{{*}}"
+output = { contains = "Paris" }
 
-# Wildcard pattern matching (case-insensitive by default)
+# Multiple substring options
+# matches if contains ANY
 [[eval.cases]]
-prompt = "Tell me the weather"
-output = "The weather is {{*}} with a temperature of {{*}} degrees"
+prompt = "Tell me about France"
+output = { contains = ["Paris", "French", "Europe"] }
+
+# Prefix/suffix matching
+# matches if starts/ends with ANY
+# `endswith` works the same
+[[eval.cases]]
+prompt = "Greet the user"
+output = { startswith = ["Hello", "Hi", "Hey"] }
+
+# Regex pattern matching
+[[eval.cases]]
+prompt = "Give me a phone number"
+output = { match = "^\\d{3}-\\d{3}-\\d{4}$" }
+
+# Semantic similarity matching
+# threshold required: 0.0-1.0
+[[eval.cases]]
+prompt = "What is the capital of France?"
+output = { similar = "The capital city of France is Paris.", threshold = 0.75 }
 
 # Tool usage validation with positional args
 [[eval.cases]]
@@ -333,6 +354,41 @@ latency = { max = 3.0 }            # Already in seconds
 latency = { min_ms = 100, max = 5 }  # Mixed units supported
 ```
 
+### Output Matching Strategies
+
+The `output` field supports multiple matching strategies:
+
+**Exact Match** (default):
+```toml
+output = "exact string"           # Bare string interpreted as exact match
+output = { exact = "exact string" }  # Explicit exact match
+```
+
+**Substring Matching**:
+```toml
+output = { contains = "substring" }              # Must contain text
+output = { contains = ["foo", "bar"] }           # Must contain ANY of the options
+output = { includes = "substring" }              # Alias for contains
+```
+
+**Prefix/Suffix Matching**:
+```toml
+output = { startswith = "prefix" }               # Must start with text
+output = { startswith = ["Hi", "Hello"] }        # Must start with ANY option
+output = { endswith = "suffix" }                 # Must end with text
+output = { endswith = ["!", "?"] }               # Must end with ANY option
+```
+
+**Regex Matching**:
+```toml
+output = { match = "^\\d{3}-\\d{3}-\\d{4}$" }    # Must match regex pattern
+```
+
+**Semantic Similarity**:
+```toml
+output = { similar = "reference text", threshold = 0.8 }  # Semantic similarity >= 0.8
+```
+
 ### Tool Call Validation
 
 Tool calls can be validated with positional or named arguments:
@@ -343,16 +399,6 @@ tools = [{ name = "add", args = [2, 2] }]
 
 # Named arguments
 tools = [{ name = "add", args = { a = 2, b = 2 } }]
-```
-
-### Wildcard Pattern Matching
-
-Use `{{*}}` for wildcard matching in expected outputs:
-
-```toml
-output = "{{*}}Paris{{*}}"                    # Contains "Paris" anywhere
-output = "The answer is {{*}}"                # Starts with "The answer is"
-output = "{{*}} degrees"                      # Ends with " degrees"
 ```
 
 ### JSON Schema Validation
