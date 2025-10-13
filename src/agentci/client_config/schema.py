@@ -1,6 +1,6 @@
 from __future__ import annotations
 from enum import Enum
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Union
 from pydantic import BaseModel, Field, model_validator
 
 __all__ = [
@@ -15,6 +15,7 @@ __all__ = [
     "ConsistencyConfig",
     "CustomConfig",
     "EvaluationCase",
+    "StringMatch",
 ]
 
 
@@ -139,6 +140,91 @@ class CustomConfig(BaseModel):
     function: str = Field(min_length=1, description="Function name within module")
 
 
+class StringMatch(BaseModel):
+    """String matching configuration with multiple strategies.
+
+    Supports exact matching, substring containment, prefix/suffix matching,
+    regex patterns, and semantic similarity.
+    """
+
+    # Exact match
+    exact: Optional[str] = Field(None, description="Exact string match")
+
+    # Substring matching
+    contains: Optional[Union[str, List[str]]] = Field(
+        None, description="Must contain substring(s) - matches if ANY found"
+    )
+
+    # Prefix/suffix matching
+    startswith: Optional[Union[str, List[str]]] = Field(
+        None, description="Must start with prefix(es) - matches if ANY match"
+    )
+    endswith: Optional[Union[str, List[str]]] = Field(
+        None, description="Must end with suffix(es) - matches if ANY match"
+    )
+
+    # Regex matching
+    match: Optional[str] = Field(None, description="Must match regex pattern")
+
+    # Semantic similarity
+    similar: Optional[str] = Field(None, description="Reference text for semantic similarity")
+    threshold: Optional[float] = Field(
+        None, ge=0.0, le=1.0, description="Similarity threshold (0.0-1.0) for semantic matching"
+    )
+
+    @classmethod
+    def from_string(cls, exact: str) -> "StringMatch":
+        """Create a StringMatch with exact matching strategy from a bare string.
+
+        Args:
+            exact: The string to match exactly
+
+        Returns:
+            StringMatch configured for exact matching
+        """
+        return cls(exact=exact)
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_includes_alias(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        """Convert 'includes' alias to 'contains' field."""
+        if isinstance(values, dict):
+            if "includes" in values:
+                if "contains" in values:
+                    raise ValueError("Cannot specify both 'contains' and 'includes' - they are aliases")
+                values["contains"] = values.pop("includes")
+        return values
+
+    @model_validator(mode="after")
+    def validate_single_strategy(self):
+        """Ensure only one matching strategy is specified."""
+        strategies = [
+            self.exact,
+            self.contains,
+            self.startswith,
+            self.endswith,
+            self.match,
+            self.similar,
+        ]
+        non_none = [s for s in strategies if s is not None]
+
+        if len(non_none) > 1:
+            raise ValueError("Only one matching strategy can be specified")
+
+        if len(non_none) == 0:
+            raise ValueError("At least one matching strategy must be specified")
+
+        return self
+
+    @model_validator(mode="after")
+    def validate_semantic_threshold(self):
+        """Ensure threshold and similar are used together."""
+        if (self.similar is None) != (self.threshold is None):
+            raise ValueError("similar and threshold must be used together")
+
+        return self
+
+
 class EvaluationCase(BaseModel):
     """Individual test case configuration."""
 
@@ -150,7 +236,10 @@ class EvaluationCase(BaseModel):
     context: Optional[Dict[str, Any]] = Field(None, description="Context/parameters for tools")
 
     # Expected output configuration
-    output: Optional[str] = Field(None, description="Expected output string")
+    output: Optional[Union[str, StringMatch]] = Field(
+        None,
+        description="Expected output - string for exact match or StringMatch object for other strategies",
+    )
     output_schema: Optional[str] = Field(None, description="JSON schema for output validation")
     blocked: Optional[bool] = Field(None, description="Whether output should be blocked (safety)")
     tools: Optional[List[ToolCallSpec]] = Field(
@@ -173,10 +262,10 @@ class EvaluationCase(BaseModel):
     parameters: Optional[Dict[str, Any]] = Field(None, description="Custom evaluation parameters")
 
     @model_validator(mode="after")
-    def validate_input_specified(self):
-        """Validate input configuration - allow empty for tools with no arguments."""
-        # For tools that don't accept arguments, both prompt and context can be None
-        # This is valid for parameter-less tool functions like get_joke_characters()
+    def normalize_output_string(self):
+        """Convert bare string output to StringMatch with exact strategy."""
+        if isinstance(self.output, str):
+            self.output = StringMatch.from_string(self.output)
         return self
 
 
@@ -225,19 +314,14 @@ class EvaluationConfig(BaseModel):
             if not self.template and not self.cases:
                 raise ValueError("Safety evaluations require either a template or test cases")
 
-        # LLM evaluations require LLM configuration
-        elif self.type == EvaluationType.LLM:
-            if not self.llm:
-                raise ValueError("LLM evaluations require llm configuration")
-
         # Custom evaluations require custom configuration
-        elif self.type == EvaluationType.CUSTOM:
+        if self.type == EvaluationType.CUSTOM:
             if not self.custom:
                 raise ValueError("Custom evaluations require custom configuration")
 
         # Other evaluation types require test cases
         # NOTE: This might be too restrictive - some evaluation types might work with templates in the future
-        elif self.type in [
+        if self.type in [
             EvaluationType.ACCURACY,
             EvaluationType.PERFORMANCE,
             EvaluationType.SEMANTIC,

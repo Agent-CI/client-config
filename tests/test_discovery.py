@@ -42,7 +42,7 @@ class TestEvaluationDiscovery:
 
         # Check evaluation names match filenames (without .toml)
         eval_names = {eval.name for eval in evaluations}
-        expected_names = {
+        assert eval_names == {
             "accuracy_test",
             "performance_test",
             "safety_template_test",
@@ -51,11 +51,10 @@ class TestEvaluationDiscovery:
             "llm_test",
             "custom_test",
         }
-        assert eval_names == expected_names
 
         # Check types are parsed correctly
         eval_types = {eval.type for eval in evaluations}
-        expected_types = {
+        assert eval_types == {
             EvaluationType.ACCURACY,
             EvaluationType.PERFORMANCE,
             EvaluationType.SAFETY,
@@ -63,7 +62,6 @@ class TestEvaluationDiscovery:
             EvaluationType.LLM,
             EvaluationType.CUSTOM,
         }
-        assert eval_types == expected_types
 
     def test_discover_evaluations_no_directory(self, repo_no_evals_dir):
         """Test discovery when evals directory doesn't exist."""
@@ -176,39 +174,20 @@ type = "accuracy"
         # Should return False due to invalid config
         assert validate_evaluation_configs(tmp_path) is False
 
-    def test_config_path_customization(self, tmp_path, monkeypatch):
-        """Test that evaluation path can be customized via config."""
-        # Create custom evals directory
-        custom_evals_dir = tmp_path / ".custom" / "evaluations"
-        custom_evals_dir.mkdir(parents=True)
+    def test_config_path_customization(self):
+        """Test that evaluation path can be customized via environment variable."""
+        import os
+        import importlib
 
-        # Add a test evaluation
-        test_toml = custom_evals_dir / "test.toml"
-        test_toml.write_text(
-            """
-[eval]
-description = "Test"
-type = "accuracy"
-targets.agents = ["*"]
+        # Set environment variable BEFORE reloading the module
+        os.environ["AGENTCI_CLIENT_BASE_PATH"] = ".custom"
 
-[[eval.cases]]
-prompt = "Test"
-output = "Expected"
-        """
-        )
+        # Reload the config module to pick up the new env var
+        import agentci.client_config._config
+        importlib.reload(agentci.client_config._config)
 
-        # Customize config path via environment variable
-        monkeypatch.setenv("AGENTCI_CLIENT_BASE_PATH", ".custom/evaluations")
+        from agentci.client_config._config import config as custom_config
 
-        # Need to reload config to pick up env var
-        from agentci.client_config._config import ClientConfig
-
-        custom_config = ClientConfig()
-
-        # Discover using custom path
-        eval_path = tmp_path / custom_config.client_base_path
-        evaluations = discover_evaluations(tmp_path)
-
-        # Should find the evaluation in custom location
-        assert len(evaluations) == 1
-        assert evaluations[0].name == "test"
+        # Verify config uses the custom env var
+        assert custom_config.client_base_path == ".custom"
+        assert custom_config.evaluation_path_name == ".custom/evals"

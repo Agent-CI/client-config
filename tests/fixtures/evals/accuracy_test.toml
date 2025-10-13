@@ -4,20 +4,20 @@ type = "accuracy"
 targets.agents = ["*"]
 targets.tools = []
 
-# Exact string match (no wildcards)
+# Exact string match
 [[eval.cases]]
 prompt = "What is 2+2?"
 output = "4"
 
-# Substring containment (case-insensitive by default)
+# Substring containment - matches if output contains "Paris"
 [[eval.cases]]
 prompt = "What is the capital of France?"
-output = "{{*}}Paris{{*}}"
+output = { contains = "Paris" }
 
-# Wildcard pattern matching (case-insensitive by default)
+# Multiple substring options - matches if ANY are found
 [[eval.cases]]
 prompt = "Tell me the weather"
-output = "The weather is {{*}} with a temperature of {{*}} degrees"
+output = { contains = ["sunny", "cloudy", "rainy", "temperature"] }
 
 # Tool evaluation with JSON schema validation
 [[eval.cases]]
