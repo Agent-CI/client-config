@@ -14,6 +14,7 @@ __all__ = [
     "LLMConfig",
     "ConsistencyConfig",
     "CustomConfig",
+    "SchemaField",
     "EvaluationCase",
     "StringMatch",
 ]
@@ -140,12 +141,99 @@ class CustomConfig(BaseModel):
     function: str = Field(min_length=1, description="Function name within module")
 
 
+class SchemaField(BaseModel):
+    """Schema field definition with type and validation constraints."""
+
+    # Type specification
+    type: Optional[Union[str, List[str], Dict[str, "SchemaField"]]] = Field(
+        None, description="Field type(s) or nested schema definition (dict of SchemaFields)"
+    )
+
+    # Required/optional
+    required: bool = Field(True, description="Whether field is required")
+    default: Optional[Any] = Field(None, description="Default value if field is missing")
+
+    # Content validation with StringMatch
+    value: Optional[Union[str, "StringMatch"]] = Field(
+        None, description="String matching strategy for field content (exact string or StringMatch object)"
+    )
+
+    # Enum/literal constraints
+    enum: Optional[List[Any]] = Field(None, description="Allowed values for enum/literal types")
+
+    # String validation
+    min_length: Optional[int] = Field(None, ge=0, description="Minimum string length")
+    max_length: Optional[int] = Field(None, ge=0, description="Maximum string length")
+
+    # Number validation
+    min: Optional[Union[int, float]] = Field(None, description="Minimum value (inclusive)")
+    max: Optional[Union[int, float]] = Field(None, description="Maximum value (inclusive)")
+
+    # Array validation
+    min_items: Optional[int] = Field(None, ge=0, description="Minimum array length")
+    max_items: Optional[int] = Field(None, ge=0, description="Maximum array length")
+
+    # Nested schema (for list/array items only)
+    # For object schemas, use type = {...} directly
+    items: Optional[Dict[str, "SchemaField"]] = Field(None, description="Schema for list/array items")
+
+    @model_validator(mode="after")
+    def normalize_value_string(self):
+        """Convert bare string value to StringMatch with exact strategy."""
+        if isinstance(self.value, str):
+            # Import here to avoid circular dependency
+            self.value = StringMatch.from_string(self.value)
+        return self
+
+    @model_validator(mode="after")
+    def validate_constraints(self):
+        """Validate that constraints are appropriate for the field type."""
+        if self.type is None:
+            # If no type specified, this is likely a nested object definition
+            return self
+
+        # If type is a dict, it's a nested schema definition - no constraint validation needed
+        if isinstance(self.type, dict):
+            return self
+
+        # Normalize type to string for checking
+        type_str = self.type if isinstance(self.type, str) else str(self.type)
+
+        # String constraints only valid for str type
+        if (self.min_length is not None or self.max_length is not None) and "str" not in type_str:
+            raise ValueError("min_length/max_length only valid for str types")
+
+        # Number constraints only valid for int/float types
+        if (self.min is not None or self.max is not None) and not any(
+            t in type_str for t in ["int", "float"]
+        ):
+            raise ValueError("min/max only valid for int/float types")
+
+        # Array constraints only valid for list/set types
+        if (self.min_items is not None or self.max_items is not None) and not any(
+            t in type_str for t in ["list", "set"]
+        ):
+            raise ValueError("min_items/max_items only valid for list/set types")
+
+        # Items only valid for list/set types
+        if self.items is not None and not any(t in type_str for t in ["list", "set"]):
+            raise ValueError("items only valid for list/set types")
+
+        return self
+
+
 class StringMatch(BaseModel):
     """String matching configuration with multiple strategies.
 
     Supports exact matching, substring containment, prefix/suffix matching,
-    regex patterns, and semantic similarity.
+    regex patterns, semantic similarity, and schema validation.
     """
+
+    # Allow field name "schema" to shadow BaseModel attribute
+    # TODO: Find a way to eliminate this warning in the future while keeping the "schema" field name
+    # We use protected_namespaces=() to allow shadowing BaseModel.schema()
+    # This is safe because we don't use the inherited schema() method
+    model_config = {"protected_namespaces": ()}
 
     # Exact match
     exact: Optional[str] = Field(None, description="Exact string match")
@@ -170,6 +258,11 @@ class StringMatch(BaseModel):
     similar: Optional[str] = Field(None, description="Reference text for semantic similarity")
     threshold: Optional[float] = Field(
         None, ge=0.0, le=1.0, description="Similarity threshold (0.0-1.0) for semantic matching"
+    )
+
+    # Schema matching
+    schema: Optional[Dict[str, SchemaField]] = Field(
+        None, description="Schema definition for structured output validation"
     )
 
     @classmethod
@@ -205,6 +298,7 @@ class StringMatch(BaseModel):
             self.endswith,
             self.match,
             self.similar,
+            self.schema,
         ]
         non_none = [s for s in strategies if s is not None]
 
