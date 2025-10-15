@@ -46,71 +46,39 @@ type = "accuracy"
 targets.agents = ["*"]
 targets.tools = []
 
-# Exact string match
-# Bare string is interpreted as `{ exact = "..." }`
+# Exact string match (default)
 [[eval.cases]]
 prompt = "What is 2+2?"
 output = "4"
 
-# Substring containment
-# can use 'includes' as alias
+# Substring containment - matches if output contains "Paris"
 [[eval.cases]]
 prompt = "What is the capital of France?"
-output = { contains = "Paris" }
+output.contains = "Paris"
 
-# Multiple substring options
-# matches if contains ANY
+# Semantic similarity - matches if semantically similar (>= 0.8)
 [[eval.cases]]
-prompt = "Tell me about France"
-output = { contains = ["Paris", "French", "Europe"] }
+prompt = "Explain what HTTP is"
+output = {
+  similar = "HTTP is a protocol for transferring data over the web.",
+  threshold = 0.8
+}
 
-# Prefix/suffix matching
-# matches if starts/ends with ANY
-# `endswith` works the same
+# Schema matching - validates structured output
 [[eval.cases]]
-prompt = "Greet the user"
-output = { startswith = ["Hello", "Hi", "Hey"] }
+prompt = "Get weather for San Francisco"
+[output.schema]
+temperature = { type = "float" }
+condition = { type = "str" }
+humidity = { type = "int" }
 
-# Regex pattern matching
-[[eval.cases]]
-prompt = "Give me a phone number"
-output = { match = "^\\d{3}-\\d{3}-\\d{4}$" }
-
-# Semantic similarity matching
-# threshold required: 0.0-1.0
-[[eval.cases]]
-prompt = "What is the capital of France?"
-output = { similar = "The capital city of France is Paris.", threshold = 0.75 }
-
-# Tool usage validation with positional args
+# Tool usage validation
 [[eval.cases]]
 prompt = "What is 2+2?"
-tools = [
-  { name = "add", args = [2, 2] }
-]
-
-# Tool usage validation with named args
-[[eval.cases]]
-prompt = "Calculate the sum of 2 and 2"
-tools = [
-  { name = "add", args = { a = 2, b = 2 } }
-]
-
-# Tool evaluation with JSON schema validation
-[[eval.cases]]
-context = { city = "San Francisco", api_key = "test_key" }
-output_schema = """
-{
-  "type": "object",
-  "required": ["temperature", "condition", "humidity"],
-  "properties": {
-    "temperature": {"type": "number"},
-    "condition": {"type": "string"},
-    "humidity": {"type": "number", "minimum": 0, "maximum": 100}
-  }
-}
-"""
+tools = [{ name = "add", args = [2, 2] }]
 ```
+
+See [Output Matching Strategies](#output-matching-strategies) for all available matching strategies (exact, contains, startswith, endswith, regex, semantic similarity) and [Schema Matching](#schema-matching) for comprehensive schema validation options.
 
 ### 2. Performance Evaluation
 
@@ -243,16 +211,14 @@ prompt = """
 Evaluate the helpfulness and accuracy of this response on a scale of 1-10.
 Consider: relevance, clarity, completeness, and correctness.
 """
-output_schema = """
-{
-  "type": "object",
-  "required": ["score", "reasoning"],
-  "properties": {
-    "score": {"type": "number", "minimum": 1, "maximum": 10},
-    "reasoning": {"type": "string"}
-  }
+
+[eval.llm.output_schema]
+score = {
+  type = "int",
+  min = 1,
+  max = 10
 }
-"""
+reasoning = { type = "str" }
 
 # Test cases with score thresholds
 [[eval.cases]]
@@ -330,7 +296,7 @@ The package validates configurations with the following rules:
 2. **Target specification**: At least one agent or tool target must be specified
 3. **Iterations**: Must be ≥ 1 if specified
 4. **Type-specific requirements**:
-   - **Accuracy**: Cases must have `output`, `output_schema`, or `tools`
+   - **Accuracy**: Cases must have `output` or `tools`
    - **Performance**: Cases must have `latency` or `tokens` thresholds
    - **Safety**: Must have either `template` or `cases` with `blocked` field
    - **Consistency**: `min_similarity` is optional (defaults to 1.0)
@@ -361,33 +327,310 @@ The `output` field supports multiple matching strategies:
 **Exact Match** (default):
 ```toml
 output = "exact string"           # Bare string interpreted as exact match
-output = { exact = "exact string" }  # Explicit exact match
+output.exact = "exact string"     # Explicit exact match
 ```
 
 **Substring Matching**:
 ```toml
-output = { contains = "substring" }              # Must contain text
-output = { contains = ["foo", "bar"] }           # Must contain ANY of the options
-output = { includes = "substring" }              # Alias for contains
+output.contains = "substring"              # Must contain text
+output.contains = ["foo", "bar"]           # Must contain ANY of the options
+output.includes = "substring"              # Alias for contains
 ```
 
 **Prefix/Suffix Matching**:
 ```toml
-output = { startswith = "prefix" }               # Must start with text
-output = { startswith = ["Hi", "Hello"] }        # Must start with ANY option
-output = { endswith = "suffix" }                 # Must end with text
-output = { endswith = ["!", "?"] }               # Must end with ANY option
+output.startswith = "prefix"               # Must start with text
+output.startswith = ["Hi", "Hello"]        # Must start with ANY option
+output.endswith = "suffix"                 # Must end with text
+output.endswith = ["!", "?"]               # Must end with ANY option
 ```
 
 **Regex Matching**:
 ```toml
-output = { match = "^\\d{3}-\\d{3}-\\d{4}$" }    # Must match regex pattern
+output.match = "^\\d{3}-\\d{3}-\\d{4}$"    # Must match regex pattern
 ```
 
 **Semantic Similarity**:
 ```toml
-output = { similar = "reference text", threshold = 0.8 }  # Semantic similarity >= 0.8
+output = {
+  similar = "reference text",
+  threshold = 0.8  # Similarity score 0.0-1.0
+}
 ```
+
+### Schema Matching
+
+Schema matching validates structured output against defined field types and validation constraints. This is particularly useful for testing tools that return JSON objects or agents that produce structured data.
+
+**Basic Field Types:**
+
+```toml
+[[eval.cases]]
+prompt = "Get weather data"
+[output.schema]
+temperature = { type = "float" }
+condition = { type = "str" }
+humidity = { type = "int" }
+is_raining = { type = "bool" }
+```
+
+**Optional Fields and Defaults:**
+
+```toml
+[[eval.cases]]
+prompt = "Get user profile"
+[output.schema]
+name = { type = "str" }
+age = { type = "int" }
+email = { type = "str", required = false }      # Optional field
+timeout = { type = "int", default = 30 }        # Field with default value
+```
+
+**Nested Objects:**
+
+```toml
+# Table syntax (recommended for readability)
+[[eval.cases]]
+prompt = "Get product with pricing"
+[output.schema]
+id = { type = "int" }
+name = { type = "str" }
+
+[output.schema.pricing]
+amount = { type = "float" }
+currency = { type = "str" }
+
+# Inline syntax (more compact)
+[[eval.cases]]
+prompt = "Get product with pricing (inline)"
+[output.schema]
+id = { type = "int" }
+name = { type = "str" }
+pricing.type = {
+  amount = { type = "float" },
+  currency = { type = "str" }
+}
+```
+
+**Collection Types:**
+
+```toml
+# List of primitives - use list[type] syntax
+[[eval.cases]]
+prompt = "Get user tags"
+[output.schema]
+user_id = { type = "int" }
+tags = { type = "list[str]" }
+scores = { type = "list[float]" }
+
+# Unstructured dict - validates it's a dict, doesn't check contents
+[[eval.cases]]
+prompt = "Get metadata"
+[output.schema]
+metadata = { type = "dict" }
+
+# List of objects - table syntax (recommended for complex schemas)
+[[eval.cases]]
+prompt = "Get products"
+[output.schema]
+products = { type = "list" }
+
+[output.schema.products.items]
+id = { type = "int" }
+name = { type = "str" }
+price = { type = "float" }
+
+# List of objects - inline syntax (more compact)
+[[eval.cases]]
+prompt = "Get products (inline)"
+[output.schema]
+products = {
+  type = "list",
+  items = {
+    id = { type = "int" },
+    name = { type = "str" }
+  }
+}
+
+# Union types (multiple allowed types)
+[[eval.cases]]
+prompt = "Get flexible data"
+[output.schema]
+value = { type = ["str", "int", "float"] }  # Can be any of these types
+```
+
+**Validation Constraints:**
+
+```toml
+# String length constraints
+[[eval.cases]]
+prompt = "Create a username"
+[output.schema]
+username = {
+  type = "str",
+  min_length = 3,
+  max_length = 20
+}
+
+# Enum/Literal choices
+[[eval.cases]]
+prompt = "Get user status"
+[output.schema]
+status = {
+  type = "str",
+  enum = ["active", "inactive", "pending"]
+}
+role = {
+  type = "str",
+  enum = ["admin", "user", "guest"]
+}
+
+# Number bounds (inclusive)
+[[eval.cases]]
+prompt = "Get user age and score"
+[output.schema]
+age = {
+  type = "int",
+  min = 0,
+  max = 120
+}
+percentage = {
+  type = "float",
+  min = 0.0,
+  max = 100.0
+}
+
+# Array size constraints
+[[eval.cases]]
+prompt = "Get user tags"
+[output.schema]
+tags = {
+  type = "list[str]",
+  min_items = 1,
+  max_items = 10
+}
+
+# Unique items (using set type)
+[[eval.cases]]
+prompt = "Get unique IDs"
+[output.schema]
+unique_ids = { type = "set[int]" }
+```
+
+**Content Validation with String Matching:**
+
+Beyond type and structural validation, you can apply string matching strategies to field values:
+
+```toml
+# Exact string match on field value
+[[eval.cases]]
+prompt = "Get system status"
+[output.schema]
+status = { type = "str", value = "operational" }
+
+# Substring containment in field value
+[[eval.cases]]
+prompt = "Get error message"
+[output.schema]
+error = {
+  type = "str",
+  value.contains = "timeout"
+}
+
+# Regex pattern matching on field value
+[[eval.cases]]
+prompt = "Get user email"
+[output.schema]
+email = {
+  type = "str",
+  value.match = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+}
+
+# Semantic similarity on field value
+[[eval.cases]]
+prompt = "Get greeting message"
+[output.schema]
+message = {
+  type = "str",
+  value = {
+    similar = "Welcome to our application!",
+    threshold = 0.8
+  }
+}
+
+# Multiple fields with different content validation
+[[eval.cases]]
+prompt = "Get API response"
+[output.schema]
+status = {
+  type = "str",
+  value.contains = ["success", "ok"]
+}
+code = {
+  type = "int",
+  min = 200,
+  max = 299
+}
+message = {
+  type = "str",
+  value.startswith = "Request"
+}
+```
+
+**Comprehensive Example:**
+
+```toml
+[[eval.cases]]
+prompt = "Create user profile"
+[output.schema]
+username = {
+  type = "str",
+  min_length = 3,
+  max_length = 20
+}
+age = {
+  type = "int",
+  min = 13,
+  max = 120
+}
+status = {
+  type = "str",
+  enum = ["active", "inactive"],
+  default = "active"
+}
+tags = {
+  type = "list[str]",
+  min_items = 1,
+  max_items = 5
+}
+email = {
+  type = "str",
+  required = false
+}
+```
+
+**Supported Types:**
+
+- `str` - String values
+- `int` - Integer values
+- `float` - Float/decimal values
+- `bool` - Boolean values (true/false)
+- `dict` - Unstructured dictionary (no schema validation)
+- `list[T]` - List of primitive type T (e.g., `list[str]`, `list[int]`)
+- `set[T]` - Set of unique primitive type T (e.g., `set[int]`)
+- `list` with `items` - List of objects with defined schema
+- `["type1", "type2", ...]` - Union types (value can be any of the listed types)
+
+**Field Options:**
+
+- `type` - The field type (required)
+- `required` - Whether the field must be present (default: true)
+- `default` - Default value if field is missing
+- `value` - String matching strategy for field content (exact string or StringMatch object)
+- `enum` - List of allowed values (for literal/enum types)
+- `min_length` / `max_length` - String length constraints
+- `min` / `max` - Number bound constraints (inclusive)
+- `min_items` / `max_items` - Array size constraints
 
 ### Tool Call Validation
 
@@ -395,29 +638,14 @@ Tool calls can be validated with positional or named arguments:
 
 ```toml
 # Positional arguments
+[[eval.cases]]
+prompt = "What is 2+2?"
 tools = [{ name = "add", args = [2, 2] }]
 
 # Named arguments
-tools = [{ name = "add", args = { a = 2, b = 2 } }]
-```
-
-### JSON Schema Validation
-
-Validate tool outputs against JSON schemas:
-
-```toml
 [[eval.cases]]
-context = { param = "value" }
-output_schema = """
-{
-  "type": "object",
-  "required": ["field1", "field2"],
-  "properties": {
-    "field1": {"type": "string"},
-    "field2": {"type": "number", "minimum": 0}
-  }
-}
-"""
+prompt = "Calculate the sum of 2 and 2"
+tools = [{ name = "add", args = { a = 2, b = 2 } }]
 ```
 
 ---

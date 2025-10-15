@@ -315,9 +315,20 @@ class TestTOMLParsing:
         assert parsed.name == "accuracy_test"
         assert parsed.type == EvaluationType.ACCURACY
         assert parsed.description == "Test response accuracy"
-        assert len(parsed.cases) == 4
+        assert len(parsed.cases) == 9  # Now includes dotted syntax examples
         assert parsed.targets.agents == ["*"]
         assert parsed.targets.tools == []
+
+        # Verify dotted syntax is parsed correctly
+        # Case 2 uses dotted syntax: output.contains = "capital"
+        assert parsed.cases[2].output.contains == "capital"
+        # Case 5 uses dotted syntax: output.startswith = [...]
+        assert parsed.cases[5].output.startswith == ["Hello", "Hi", "Hey"]
+        # Case 6 uses dotted syntax: output.match = "..."
+        assert parsed.cases[6].output.match == "^\\d{3}-\\d{3}-\\d{4}$"
+        # Case 7 uses dotted syntax: output.similar + output.threshold
+        assert parsed.cases[7].output.similar == "The capital city of France is Paris."
+        assert parsed.cases[7].output.threshold == 0.75
 
     def test_parse_performance_toml(self, fixtures_path):
         """Test parsing performance evaluation TOML with time normalization."""
