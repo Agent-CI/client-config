@@ -334,7 +334,6 @@ class EvaluationCase(BaseModel):
         None,
         description="Expected output - string for exact match or StringMatch object for other strategies",
     )
-    output_schema: Optional[str] = Field(None, description="JSON schema for output validation")
     blocked: Optional[bool] = Field(None, description="Whether output should be blocked (safety)")
     tools: Optional[List[ToolCallSpec]] = Field(
         None, description="Expected tool calls for validation (accuracy)"
@@ -354,6 +353,23 @@ class EvaluationCase(BaseModel):
 
     # Custom evaluation parameters
     parameters: Optional[Dict[str, Any]] = Field(None, description="Custom evaluation parameters")
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_output(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        """Normalize output field to StringMatch."""
+        if isinstance(values, dict) and "output" in values:
+            output = values["output"]
+            # If output is already a StringMatch or None, leave it alone
+            if output is None or isinstance(output, StringMatch):
+                return values
+            # If it's a bare string, it will be handled by Pydantic + post-validator
+            if isinstance(output, str):
+                return values
+            # If it's a dict, convert it to a StringMatch
+            if isinstance(output, dict):
+                values["output"] = StringMatch(**output)
+        return values
 
     @model_validator(mode="after")
     def normalize_output_string(self):
@@ -437,9 +453,9 @@ class EvaluationConfig(BaseModel):
 
             # Type-specific case validation
             if self.type == EvaluationType.ACCURACY:
-                if not test_case.output and not test_case.output_schema and not test_case.tools:
+                if not test_case.output and not test_case.tools:
                     raise ValueError(
-                        f"Case {case_num}: Accuracy evaluations require output, output_schema, or tools"
+                        f"Case {case_num}: Accuracy evaluations require output or tools"
                     )
 
             elif self.type == EvaluationType.PERFORMANCE:

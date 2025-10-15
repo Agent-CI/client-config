@@ -330,6 +330,19 @@ class TestTOMLParsing:
         assert parsed.cases[7].output.similar == "The capital city of France is Paris."
         assert parsed.cases[7].output.threshold == 0.75
 
+        # Case 8 uses nested table syntax: [eval.cases.output.schema]
+        assert isinstance(parsed.cases[8].output, StringMatch)
+        assert parsed.cases[8].output.schema is not None
+        assert len(parsed.cases[8].output.schema) == 3
+        assert "temperature" in parsed.cases[8].output.schema
+        assert "condition" in parsed.cases[8].output.schema
+        assert "humidity" in parsed.cases[8].output.schema
+        assert parsed.cases[8].output.schema["temperature"].type == "float"
+        assert parsed.cases[8].output.schema["condition"].type == "str"
+        assert parsed.cases[8].output.schema["humidity"].type == "int"
+        assert parsed.cases[8].output.schema["humidity"].min == 0
+        assert parsed.cases[8].output.schema["humidity"].max == 100
+
     def test_parse_performance_toml(self, fixtures_path):
         """Test parsing performance evaluation TOML with time normalization."""
         toml_path = fixtures_path / "performance_test.toml"

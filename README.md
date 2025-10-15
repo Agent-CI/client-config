@@ -67,7 +67,8 @@ output = {
 # Schema matching - validates structured output
 [[eval.cases]]
 prompt = "Get weather for San Francisco"
-[output.schema]
+
+[eval.cases.output.schema]
 temperature = { type = "float" }
 condition = { type = "str" }
 humidity = { type = "int" }
@@ -367,7 +368,8 @@ Schema matching validates structured output against defined field types and vali
 ```toml
 [[eval.cases]]
 prompt = "Get weather data"
-[output.schema]
+
+[eval.cases.output.schema]
 temperature = { type = "float" }
 condition = { type = "str" }
 humidity = { type = "int" }
@@ -379,7 +381,8 @@ is_raining = { type = "bool" }
 ```toml
 [[eval.cases]]
 prompt = "Get user profile"
-[output.schema]
+
+[eval.cases.output.schema]
 name = { type = "str" }
 age = { type = "int" }
 email = { type = "str", required = false }      # Optional field
@@ -392,18 +395,20 @@ timeout = { type = "int", default = 30 }        # Field with default value
 # Table syntax (recommended for readability)
 [[eval.cases]]
 prompt = "Get product with pricing"
-[output.schema]
+
+[eval.cases.output.schema]
 id = { type = "int" }
 name = { type = "str" }
 
-[output.schema.pricing]
+[eval.cases.output.schema.pricing]
 amount = { type = "float" }
 currency = { type = "str" }
 
 # Inline syntax (more compact)
 [[eval.cases]]
 prompt = "Get product with pricing (inline)"
-[output.schema]
+
+[eval.cases.output.schema]
 id = { type = "int" }
 name = { type = "str" }
 pricing.type = {
@@ -418,7 +423,8 @@ pricing.type = {
 # List of primitives - use list[type] syntax
 [[eval.cases]]
 prompt = "Get user tags"
-[output.schema]
+
+[eval.cases.output.schema]
 user_id = { type = "int" }
 tags = { type = "list[str]" }
 scores = { type = "list[float]" }
@@ -426,16 +432,18 @@ scores = { type = "list[float]" }
 # Unstructured dict - validates it's a dict, doesn't check contents
 [[eval.cases]]
 prompt = "Get metadata"
-[output.schema]
+
+[eval.cases.output.schema]
 metadata = { type = "dict" }
 
 # List of objects - table syntax (recommended for complex schemas)
 [[eval.cases]]
 prompt = "Get products"
-[output.schema]
+
+[eval.cases.output.schema]
 products = { type = "list" }
 
-[output.schema.products.items]
+[eval.cases.output.schema.products.items]
 id = { type = "int" }
 name = { type = "str" }
 price = { type = "float" }
@@ -443,7 +451,8 @@ price = { type = "float" }
 # List of objects - inline syntax (more compact)
 [[eval.cases]]
 prompt = "Get products (inline)"
-[output.schema]
+
+[eval.cases.output.schema]
 products = {
   type = "list",
   items = {
@@ -455,7 +464,8 @@ products = {
 # Union types (multiple allowed types)
 [[eval.cases]]
 prompt = "Get flexible data"
-[output.schema]
+
+[eval.cases.output.schema]
 value = { type = ["str", "int", "float"] }  # Can be any of these types
 ```
 
@@ -465,7 +475,8 @@ value = { type = ["str", "int", "float"] }  # Can be any of these types
 # String length constraints
 [[eval.cases]]
 prompt = "Create a username"
-[output.schema]
+
+[eval.cases.output.schema]
 username = {
   type = "str",
   min_length = 3,
@@ -475,7 +486,8 @@ username = {
 # Enum/Literal choices
 [[eval.cases]]
 prompt = "Get user status"
-[output.schema]
+
+[eval.cases.output.schema]
 status = {
   type = "str",
   enum = ["active", "inactive", "pending"]
@@ -488,7 +500,8 @@ role = {
 # Number bounds (inclusive)
 [[eval.cases]]
 prompt = "Get user age and score"
-[output.schema]
+
+[eval.cases.output.schema]
 age = {
   type = "int",
   min = 0,
@@ -503,7 +516,8 @@ percentage = {
 # Array size constraints
 [[eval.cases]]
 prompt = "Get user tags"
-[output.schema]
+
+[eval.cases.output.schema]
 tags = {
   type = "list[str]",
   min_items = 1,
@@ -513,7 +527,8 @@ tags = {
 # Unique items (using set type)
 [[eval.cases]]
 prompt = "Get unique IDs"
-[output.schema]
+
+[eval.cases.output.schema]
 unique_ids = { type = "set[int]" }
 ```
 
@@ -525,13 +540,15 @@ Beyond type and structural validation, you can apply string matching strategies 
 # Exact string match on field value
 [[eval.cases]]
 prompt = "Get system status"
-[output.schema]
+
+[eval.cases.output.schema]
 status = { type = "str", value = "operational" }
 
 # Substring containment in field value
 [[eval.cases]]
 prompt = "Get error message"
-[output.schema]
+
+[eval.cases.output.schema]
 error = {
   type = "str",
   value.contains = "timeout"
@@ -540,7 +557,8 @@ error = {
 # Regex pattern matching on field value
 [[eval.cases]]
 prompt = "Get user email"
-[output.schema]
+
+[eval.cases.output.schema]
 email = {
   type = "str",
   value.match = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
@@ -549,7 +567,8 @@ email = {
 # Semantic similarity on field value
 [[eval.cases]]
 prompt = "Get greeting message"
-[output.schema]
+
+[eval.cases.output.schema]
 message = {
   type = "str",
   value = {
@@ -561,7 +580,8 @@ message = {
 # Multiple fields with different content validation
 [[eval.cases]]
 prompt = "Get API response"
-[output.schema]
+
+[eval.cases.output.schema]
 status = {
   type = "str",
   value.contains = ["success", "ok"]
@@ -582,7 +602,8 @@ message = {
 ```toml
 [[eval.cases]]
 prompt = "Create user profile"
-[output.schema]
+
+[eval.cases.output.schema]
 username = {
   type = "str",
   min_length = 3,

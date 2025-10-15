@@ -45,17 +45,11 @@ prompt = "What is the capital of France?"
 output.similar = "The capital city of France is Paris."
 output.threshold = 0.75
 
-# Tool evaluation with JSON schema validation
+# Tool evaluation with schema matching
 [[eval.cases]]
 context = { city = "San Francisco", api_key = "test_key" }
-output_schema = """
-{
-  "type": "object",
-  "required": ["temperature", "condition", "humidity"],
-  "properties": {
-    "temperature": {"type": "number"},
-    "condition": {"type": "string"},
-    "humidity": {"type": "number", "minimum": 0, "maximum": 100}
-  }
-}
-"""
+
+[eval.cases.output.schema]
+temperature = { type = "float" }
+condition = { type = "str" }
+humidity = { type = "int", min = 0, max = 100 }
