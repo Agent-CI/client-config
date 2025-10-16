@@ -1,6 +1,6 @@
 from __future__ import annotations
 from enum import Enum
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Union
 from pydantic import BaseModel, Field, model_validator
 
 __all__ = [
@@ -14,7 +14,9 @@ __all__ = [
     "LLMConfig",
     "ConsistencyConfig",
     "CustomConfig",
+    "SchemaField",
     "EvaluationCase",
+    "StringMatch",
 ]
 
 
@@ -139,6 +141,178 @@ class CustomConfig(BaseModel):
     function: str = Field(min_length=1, description="Function name within module")
 
 
+class SchemaField(BaseModel):
+    """Schema field definition with type and validation constraints."""
+
+    # Type specification
+    type: Optional[Union[str, List[str], Dict[str, "SchemaField"]]] = Field(
+        None, description="Field type(s) or nested schema definition (dict of SchemaFields)"
+    )
+
+    # Required/optional
+    required: bool = Field(True, description="Whether field is required")
+    default: Optional[Any] = Field(None, description="Default value if field is missing")
+
+    # Content validation with StringMatch
+    value: Optional[Union[str, "StringMatch"]] = Field(
+        None, description="String matching strategy for field content (exact string or StringMatch object)"
+    )
+
+    # Enum/literal constraints
+    enum: Optional[List[Any]] = Field(None, description="Allowed values for enum/literal types")
+
+    # String validation
+    min_length: Optional[int] = Field(None, ge=0, description="Minimum string length")
+    max_length: Optional[int] = Field(None, ge=0, description="Maximum string length")
+
+    # Number validation
+    min: Optional[Union[int, float]] = Field(None, description="Minimum value (inclusive)")
+    max: Optional[Union[int, float]] = Field(None, description="Maximum value (inclusive)")
+
+    # Array validation
+    min_items: Optional[int] = Field(None, ge=0, description="Minimum array length")
+    max_items: Optional[int] = Field(None, ge=0, description="Maximum array length")
+
+    # Nested schema (for list/array items only)
+    # For object schemas, use type = {...} directly
+    items: Optional[Dict[str, "SchemaField"]] = Field(None, description="Schema for list/array items")
+
+    @model_validator(mode="after")
+    def normalize_value_string(self):
+        """Convert bare string value to StringMatch with exact strategy."""
+        if isinstance(self.value, str):
+            # Import here to avoid circular dependency
+            self.value = StringMatch.from_string(self.value)
+        return self
+
+    @model_validator(mode="after")
+    def validate_constraints(self):
+        """Validate that constraints are appropriate for the field type."""
+        if self.type is None:
+            # If no type specified, this is likely a nested object definition
+            return self
+
+        # If type is a dict, it's a nested schema definition - no constraint validation needed
+        if isinstance(self.type, dict):
+            return self
+
+        # Normalize type to string for checking
+        type_str = self.type if isinstance(self.type, str) else str(self.type)
+
+        # String constraints only valid for str type
+        if (self.min_length is not None or self.max_length is not None) and "str" not in type_str:
+            raise ValueError("min_length/max_length only valid for str types")
+
+        # Number constraints only valid for int/float types
+        if (self.min is not None or self.max is not None) and not any(
+            t in type_str for t in ["int", "float"]
+        ):
+            raise ValueError("min/max only valid for int/float types")
+
+        # Array constraints only valid for list/set types
+        if (self.min_items is not None or self.max_items is not None) and not any(
+            t in type_str for t in ["list", "set"]
+        ):
+            raise ValueError("min_items/max_items only valid for list/set types")
+
+        # Items only valid for list/set types
+        if self.items is not None and not any(t in type_str for t in ["list", "set"]):
+            raise ValueError("items only valid for list/set types")
+
+        return self
+
+
+class StringMatch(BaseModel):
+    """String matching configuration with multiple strategies.
+
+    Supports exact matching, substring containment, prefix/suffix matching,
+    regex patterns, semantic similarity, and schema validation.
+    """
+
+    # Allow field name "schema" to shadow BaseModel attribute
+    # TODO: Find a way to eliminate this warning in the future while keeping the "schema" field name
+    # We use protected_namespaces=() to allow shadowing BaseModel.schema()
+    # This is safe because we don't use the inherited schema() method
+    model_config = {"protected_namespaces": ()}
+
+    # Exact match
+    exact: Optional[str] = Field(None, description="Exact string match")
+
+    # Substring matching
+    contains: Optional[Union[str, List[str]]] = Field(
+        None, description="Must contain substring(s) - single value or ALL in list"
+    )
+    contains_any: Optional[List[str]] = Field(
+        None, description="Must contain at least one of these substrings (ANY match)"
+    )
+
+    # Prefix/suffix matching
+    startswith: Optional[Union[str, List[str]]] = Field(
+        None, description="Must start with prefix(es) - matches if ANY match"
+    )
+    endswith: Optional[Union[str, List[str]]] = Field(
+        None, description="Must end with suffix(es) - matches if ANY match"
+    )
+
+    # Regex matching
+    match: Optional[str] = Field(None, description="Must match regex pattern")
+
+    # Semantic similarity
+    similar: Optional[str] = Field(None, description="Reference text for semantic similarity")
+    threshold: Optional[float] = Field(
+        None, ge=0.0, le=1.0, description="Similarity threshold (0.0-1.0) for semantic matching"
+    )
+
+    # Schema matching
+    schema: Optional[Dict[str, SchemaField]] = Field(
+        None, description="Schema definition for structured output validation"
+    )
+
+    @classmethod
+    def from_string(cls, exact: str) -> "StringMatch":
+        """Create a StringMatch with exact matching strategy from a bare string.
+
+        Args:
+            exact: The string to match exactly
+
+        Returns:
+            StringMatch configured for exact matching
+        """
+        return cls(exact=exact)
+
+
+    @model_validator(mode="after")
+    def validate_single_strategy(self):
+        """Ensure only one matching strategy is specified."""
+        strategies = [
+            self.exact,
+            self.contains,
+            self.contains_any,
+            self.startswith,
+            self.endswith,
+            self.match,
+            self.similar,
+            self.schema,
+        ]
+        non_none = [s for s in strategies if s is not None]
+
+        if len(non_none) > 1:
+            raise ValueError("Only one matching strategy can be specified")
+
+        if len(non_none) == 0:
+            raise ValueError("At least one matching strategy must be specified")
+
+        return self
+
+    @model_validator(mode="after")
+    def validate_semantic_threshold(self):
+        """Ensure threshold and similar are used together."""
+        if (self.similar is None) != (self.threshold is None):
+            raise ValueError("similar and threshold must be used together")
+
+        return self
+
+
 class EvaluationCase(BaseModel):
     """Individual test case configuration."""
 
@@ -150,8 +324,10 @@ class EvaluationCase(BaseModel):
     context: Optional[Dict[str, Any]] = Field(None, description="Context/parameters for tools")
 
     # Expected output configuration
-    output: Optional[str] = Field(None, description="Expected output string")
-    output_schema: Optional[str] = Field(None, description="JSON schema for output validation")
+    output: Optional[Union[str, StringMatch]] = Field(
+        None,
+        description="Expected output - string for exact match or StringMatch object for other strategies",
+    )
     blocked: Optional[bool] = Field(None, description="Whether output should be blocked (safety)")
     tools: Optional[List[ToolCallSpec]] = Field(
         None, description="Expected tool calls for validation (accuracy)"
@@ -172,11 +348,28 @@ class EvaluationCase(BaseModel):
     # Custom evaluation parameters
     parameters: Optional[Dict[str, Any]] = Field(None, description="Custom evaluation parameters")
 
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_output(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        """Normalize output field to StringMatch."""
+        if isinstance(values, dict) and "output" in values:
+            output = values["output"]
+            # If output is already a StringMatch or None, leave it alone
+            if output is None or isinstance(output, StringMatch):
+                return values
+            # If it's a bare string, it will be handled by Pydantic + post-validator
+            if isinstance(output, str):
+                return values
+            # If it's a dict, convert it to a StringMatch
+            if isinstance(output, dict):
+                values["output"] = StringMatch(**output)
+        return values
+
     @model_validator(mode="after")
-    def validate_input_specified(self):
-        """Validate input configuration - allow empty for tools with no arguments."""
-        # For tools that don't accept arguments, both prompt and context can be None
-        # This is valid for parameter-less tool functions like get_joke_characters()
+    def normalize_output_string(self):
+        """Convert bare string output to StringMatch with exact strategy."""
+        if isinstance(self.output, str):
+            self.output = StringMatch.from_string(self.output)
         return self
 
 
@@ -225,19 +418,14 @@ class EvaluationConfig(BaseModel):
             if not self.template and not self.cases:
                 raise ValueError("Safety evaluations require either a template or test cases")
 
-        # LLM evaluations require LLM configuration
-        elif self.type == EvaluationType.LLM:
-            if not self.llm:
-                raise ValueError("LLM evaluations require llm configuration")
-
         # Custom evaluations require custom configuration
-        elif self.type == EvaluationType.CUSTOM:
+        if self.type == EvaluationType.CUSTOM:
             if not self.custom:
                 raise ValueError("Custom evaluations require custom configuration")
 
         # Other evaluation types require test cases
         # NOTE: This might be too restrictive - some evaluation types might work with templates in the future
-        elif self.type in [
+        if self.type in [
             EvaluationType.ACCURACY,
             EvaluationType.PERFORMANCE,
             EvaluationType.SEMANTIC,
@@ -259,9 +447,9 @@ class EvaluationConfig(BaseModel):
 
             # Type-specific case validation
             if self.type == EvaluationType.ACCURACY:
-                if not test_case.output and not test_case.output_schema and not test_case.tools:
+                if not test_case.output and not test_case.tools:
                     raise ValueError(
-                        f"Case {case_num}: Accuracy evaluations require output, output_schema, or tools"
+                        f"Case {case_num}: Accuracy evaluations require output or tools"
                     )
 
             elif self.type == EvaluationType.PERFORMANCE:

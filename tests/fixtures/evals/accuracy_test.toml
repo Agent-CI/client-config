@@ -4,32 +4,52 @@ type = "accuracy"
 targets.agents = ["*"]
 targets.tools = []
 
-# Exact string match (no wildcards)
+# Exact string match
 [[eval.cases]]
 prompt = "What is 2+2?"
 output = "4"
 
-# Substring containment (case-insensitive by default)
+# Substring containment (inline syntax) - matches if output contains "Paris"
 [[eval.cases]]
 prompt = "What is the capital of France?"
-output = "{{*}}Paris{{*}}"
+output = { contains = "Paris" }
 
-# Wildcard pattern matching (case-insensitive by default)
+# Substring containment (dotted syntax) - matches if output contains "capital"
+[[eval.cases]]
+prompt = "What is the capital of France?"
+output.contains = "capital"
+
+# Multiple substring options (inline) - matches if ANY are found
 [[eval.cases]]
 prompt = "Tell me the weather"
-output = "The weather is {{*}} with a temperature of {{*}} degrees"
+output = { contains_any = ["sunny", "cloudy", "rainy", "temperature"] }
 
-# Tool evaluation with JSON schema validation
+# Multiple substring options (dotted) - matches if ANY are found
+[[eval.cases]]
+prompt = "Tell me the weather"
+output.contains_any = ["sunny", "cloudy", "rainy", "temperature"]
+
+# Prefix matching (dotted syntax)
+[[eval.cases]]
+prompt = "Greet the user"
+output.startswith = ["Hello", "Hi", "Hey"]
+
+# Regex matching (dotted syntax)
+[[eval.cases]]
+prompt = "Give me a phone number"
+output.match = "^\\d{3}-\\d{3}-\\d{4}$"
+
+# Semantic similarity (dotted syntax)
+[[eval.cases]]
+prompt = "What is the capital of France?"
+output.similar = "The capital city of France is Paris."
+output.threshold = 0.75
+
+# Tool evaluation with schema matching
 [[eval.cases]]
 context = { city = "San Francisco", api_key = "test_key" }
-output_schema = """
-{
-  "type": "object",
-  "required": ["temperature", "condition", "humidity"],
-  "properties": {
-    "temperature": {"type": "number"},
-    "condition": {"type": "string"},
-    "humidity": {"type": "number", "minimum": 0, "maximum": 100}
-  }
-}
-"""
+
+[eval.cases.output.schema]
+temperature = { type = "float" }
+condition = { type = "str" }
+humidity = { type = "int", min = 0, max = 100 }

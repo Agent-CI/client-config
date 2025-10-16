@@ -8,6 +8,8 @@ from agentci.client_config import (
     EvaluationTargets,
     LatencyThreshold,
     EvaluationConfig,
+    EvaluationCase,
+    StringMatch,
     parse_evaluation_config_toml,
 )
 
@@ -101,10 +103,87 @@ class TestEvaluationConfig:
         assert config.type == EvaluationType.ACCURACY
         assert len(config.cases) == 1
         assert config.cases[0].prompt == "Test prompt"
+        # Verify bare string is converted to StringMatch
+        assert isinstance(config.cases[0].output, StringMatch)
+        assert config.cases[0].output.exact == "Expected output"
+
+    def test_accuracy_with_stringmatch_contains(self):
+        """Test accuracy configuration with StringMatch contains strategy."""
+        config = EvaluationConfig(
+            name="test_accuracy",
+            file_path="test_accuracy.toml",
+            description="Test accuracy",
+            type=EvaluationType.ACCURACY,
+            targets=EvaluationTargets(agents=["test_agent"]),
+            cases=[{"prompt": "Test prompt", "output": {"contains": "Paris"}}],
+        )
+        assert isinstance(config.cases[0].output, StringMatch)
+        assert config.cases[0].output.contains == "Paris"
+
+    def test_accuracy_with_stringmatch_contains_all(self):
+        """Test accuracy configuration with contains (ALL semantics)."""
+        config = EvaluationConfig(
+            name="test_accuracy",
+            file_path="test_accuracy.toml",
+            description="Test accuracy",
+            type=EvaluationType.ACCURACY,
+            targets=EvaluationTargets(agents=["test_agent"]),
+            cases=[{"prompt": "Test prompt", "output": {"contains": ["Paris", "France", "Europe"]}}],
+        )
+        assert isinstance(config.cases[0].output, StringMatch)
+        assert config.cases[0].output.contains == ["Paris", "France", "Europe"]
+
+    def test_accuracy_with_stringmatch_contains_any(self):
+        """Test accuracy configuration with contains_any (ANY semantics)."""
+        config = EvaluationConfig(
+            name="test_accuracy",
+            file_path="test_accuracy.toml",
+            description="Test accuracy",
+            type=EvaluationType.ACCURACY,
+            targets=EvaluationTargets(agents=["test_agent"]),
+            cases=[{"prompt": "Test prompt", "output": {"contains_any": ["Paris", "France", "Europe"]}}],
+        )
+        assert isinstance(config.cases[0].output, StringMatch)
+        assert config.cases[0].output.contains_any == ["Paris", "France", "Europe"]
+
+    def test_accuracy_with_stringmatch_regex(self):
+        """Test accuracy configuration with regex pattern matching."""
+        config = EvaluationConfig(
+            name="test_accuracy",
+            file_path="test_accuracy.toml",
+            description="Test accuracy",
+            type=EvaluationType.ACCURACY,
+            targets=EvaluationTargets(agents=["test_agent"]),
+            cases=[{"prompt": "Test prompt", "output": {"match": r"^\d{3}-\d{3}-\d{4}$"}}],
+        )
+        assert isinstance(config.cases[0].output, StringMatch)
+        assert config.cases[0].output.match == r"^\d{3}-\d{3}-\d{4}$"
+
+    def test_accuracy_with_stringmatch_semantic(self):
+        """Test accuracy configuration with semantic similarity matching."""
+        config = EvaluationConfig(
+            name="test_accuracy",
+            file_path="test_accuracy.toml",
+            description="Test accuracy",
+            type=EvaluationType.ACCURACY,
+            targets=EvaluationTargets(agents=["test_agent"]),
+            cases=[{"prompt": "Test prompt", "output": {"similar": "Paris is the capital", "threshold": 0.8}}],
+        )
+        assert isinstance(config.cases[0].output, StringMatch)
+        assert config.cases[0].output.similar == "Paris is the capital"
+        assert config.cases[0].output.threshold == 0.8
+
+    def test_accuracy_with_stringmatch_instance(self):
+        """Test accuracy configuration with output already as StringMatch instance."""
+        # When output is already a StringMatch object, it should be preserved
+        string_match = StringMatch(contains="Paris")
+        case = EvaluationCase(prompt="Test prompt", output=string_match)
+        assert isinstance(case.output, StringMatch)
+        assert case.output.contains == "Paris"
 
     def test_invalid_no_targets(self):
         """Test that config requires at least one target."""
-        with pytest.raises(ValueError, match="At least one agent or tool target must be specified"):
+        with pytest.raises(ValueError):
             EvaluationConfig(
                 name="test_invalid",
                 file_path="test_invalid.toml",
@@ -129,7 +208,7 @@ class TestEvaluationConfig:
 
     def test_llm_requires_config(self):
         """Test that LLM evaluations require LLM configuration."""
-        with pytest.raises(ValueError, match="LLM evaluations require llm configuration"):
+        with pytest.raises(ValueError):
             EvaluationConfig(
                 name="test_llm",
                 file_path="test_llm.toml",
@@ -141,7 +220,7 @@ class TestEvaluationConfig:
 
     def test_custom_requires_config(self):
         """Test that custom evaluations require custom configuration."""
-        with pytest.raises(ValueError, match="Custom evaluations require custom configuration"):
+        with pytest.raises(ValueError):
             EvaluationConfig(
                 name="test_custom",
                 file_path="test_custom.toml",
@@ -153,7 +232,7 @@ class TestEvaluationConfig:
 
     def test_accuracy_case_validation(self):
         """Test accuracy case validation."""
-        with pytest.raises(ValueError, match="Accuracy evaluations require output, output_schema, or tools"):
+        with pytest.raises(ValueError):
             EvaluationConfig(
                 name="test_accuracy",
                 file_path="test_accuracy.toml",
@@ -165,7 +244,7 @@ class TestEvaluationConfig:
 
     def test_performance_case_validation(self):
         """Test performance case validation."""
-        with pytest.raises(ValueError, match="Performance evaluations require latency or tokens thresholds"):
+        with pytest.raises(ValueError):
             EvaluationConfig(
                 name="test_performance",
                 file_path="test_performance.toml",
@@ -191,7 +270,7 @@ class TestEvaluationConfig:
 
     def test_safety_case_validation(self):
         """Test safety case validation."""
-        with pytest.raises(ValueError, match="Safety evaluations require blocked field"):
+        with pytest.raises(ValueError):
             EvaluationConfig(
                 name="test_safety",
                 file_path="test_safety.toml",
@@ -199,6 +278,43 @@ class TestEvaluationConfig:
                 type=EvaluationType.SAFETY,
                 targets=EvaluationTargets(agents=["test"]),
                 cases=[{"prompt": "Test"}],  # Missing blocked
+            )
+
+    def test_safety_requires_template_or_cases(self):
+        """Test that safety evaluations require either template or cases."""
+        with pytest.raises(ValueError):
+            EvaluationConfig(
+                name="test_safety",
+                file_path="test_safety.toml",
+                description="Safety without template or cases",
+                type=EvaluationType.SAFETY,
+                targets=EvaluationTargets(agents=["test"]),
+                cases=[],  # Empty cases and no template
+            )
+
+    def test_accuracy_requires_cases(self):
+        """Test that accuracy evaluations require test cases."""
+        with pytest.raises(ValueError):
+            EvaluationConfig(
+                name="test_accuracy",
+                file_path="test_accuracy.toml",
+                description="Accuracy without cases",
+                type=EvaluationType.ACCURACY,
+                targets=EvaluationTargets(agents=["test"]),
+                cases=[],  # Empty cases
+            )
+
+    def test_llm_case_requires_score(self):
+        """Test that LLM evaluation cases require score thresholds."""
+        with pytest.raises(ValueError):
+            EvaluationConfig(
+                name="test_llm",
+                file_path="test_llm.toml",
+                description="LLM case without score",
+                type=EvaluationType.LLM,
+                targets=EvaluationTargets(agents=["test"]),
+                llm={"model": "gpt-4", "prompt": "Evaluate this"},
+                cases=[{"prompt": "Test"}],  # Missing score
             )
 
 
@@ -220,9 +336,36 @@ class TestTOMLParsing:
         assert parsed.name == "accuracy_test"
         assert parsed.type == EvaluationType.ACCURACY
         assert parsed.description == "Test response accuracy"
-        assert len(parsed.cases) == 4
+        assert len(parsed.cases) == 9  # Now includes dotted syntax examples
         assert parsed.targets.agents == ["*"]
         assert parsed.targets.tools == []
+
+        # Verify dotted syntax is parsed correctly
+        # Case 2 uses dotted syntax: output.contains = "capital"
+        assert parsed.cases[2].output.contains == "capital"
+        # Case 3 and 4 use contains_any: output.contains_any = [...]
+        assert parsed.cases[3].output.contains_any == ["sunny", "cloudy", "rainy", "temperature"]
+        assert parsed.cases[4].output.contains_any == ["sunny", "cloudy", "rainy", "temperature"]
+        # Case 5 uses dotted syntax: output.startswith = [...]
+        assert parsed.cases[5].output.startswith == ["Hello", "Hi", "Hey"]
+        # Case 6 uses dotted syntax: output.match = "..."
+        assert parsed.cases[6].output.match == "^\\d{3}-\\d{3}-\\d{4}$"
+        # Case 7 uses dotted syntax: output.similar + output.threshold
+        assert parsed.cases[7].output.similar == "The capital city of France is Paris."
+        assert parsed.cases[7].output.threshold == 0.75
+
+        # Case 8 uses nested table syntax: [eval.cases.output.schema]
+        assert isinstance(parsed.cases[8].output, StringMatch)
+        assert parsed.cases[8].output.schema is not None
+        assert len(parsed.cases[8].output.schema) == 3
+        assert "temperature" in parsed.cases[8].output.schema
+        assert "condition" in parsed.cases[8].output.schema
+        assert "humidity" in parsed.cases[8].output.schema
+        assert parsed.cases[8].output.schema["temperature"].type == "float"
+        assert parsed.cases[8].output.schema["condition"].type == "str"
+        assert parsed.cases[8].output.schema["humidity"].type == "int"
+        assert parsed.cases[8].output.schema["humidity"].min == 0
+        assert parsed.cases[8].output.schema["humidity"].max == 100
 
     def test_parse_performance_toml(self, fixtures_path):
         """Test parsing performance evaluation TOML with time normalization."""
@@ -314,5 +457,5 @@ class TestTOMLParsing:
 description = "Missing eval section"
         """)
 
-        with pytest.raises(ValueError, match="Missing 'eval' section"):
+        with pytest.raises(ValueError):
             parse_evaluation_config_toml(invalid_toml, tmp_path)

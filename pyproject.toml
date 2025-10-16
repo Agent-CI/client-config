@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentci-client-config"
-version = "0.1.0"
+version = "0.1.1"
 description = "Client configuration for AgentCI"
 authors = [
     {name = "Agent CI", email = "hello@agent-ci.com"},
@@ -15,7 +15,6 @@ requires-python = ">=3.11"
 dependencies = [
     "pydantic>=2.0.0",
     "pydantic-settings>=2.0.0",
-    "toml>=0.10.2",
 ]
 
 [project.optional-dependencies]
