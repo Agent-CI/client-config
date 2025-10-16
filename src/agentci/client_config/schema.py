@@ -240,7 +240,10 @@ class StringMatch(BaseModel):
 
     # Substring matching
     contains: Optional[Union[str, List[str]]] = Field(
-        None, description="Must contain substring(s) - matches if ANY found"
+        None, description="Must contain substring(s) - single value or ALL in list"
+    )
+    contains_any: Optional[List[str]] = Field(
+        None, description="Must contain at least one of these substrings (ANY match)"
     )
 
     # Prefix/suffix matching
@@ -277,16 +280,6 @@ class StringMatch(BaseModel):
         """
         return cls(exact=exact)
 
-    @model_validator(mode="before")
-    @classmethod
-    def normalize_includes_alias(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        """Convert 'includes' alias to 'contains' field."""
-        if isinstance(values, dict):
-            if "includes" in values:
-                if "contains" in values:
-                    raise ValueError("Cannot specify both 'contains' and 'includes' - they are aliases")
-                values["contains"] = values.pop("includes")
-        return values
 
     @model_validator(mode="after")
     def validate_single_strategy(self):
@@ -294,6 +287,7 @@ class StringMatch(BaseModel):
         strategies = [
             self.exact,
             self.contains,
+            self.contains_any,
             self.startswith,
             self.endswith,
             self.match,

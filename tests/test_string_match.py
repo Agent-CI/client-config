@@ -24,20 +24,16 @@ class TestStringMatchCreation:
         assert match.exact is None
 
     def test_contains_multiple(self):
-        """Test contains with multiple strings."""
+        """Test contains with multiple strings (ALL semantics)."""
         match = StringMatch(contains=["foo", "bar", "baz"])
         assert match.contains == ["foo", "bar", "baz"]
 
-    def test_includes_alias_single(self):
-        """Test includes alias with single string."""
-        match = StringMatch(includes="substring")
-        assert match.contains == "substring"
+    def test_contains_any(self):
+        """Test contains_any with multiple strings (ANY semantics)."""
+        match = StringMatch(contains_any=["foo", "bar", "baz"])
+        assert match.contains_any == ["foo", "bar", "baz"]
         assert match.exact is None
-
-    def test_includes_alias_multiple(self):
-        """Test includes alias with multiple strings."""
-        match = StringMatch(includes=["foo", "bar"])
-        assert match.contains == ["foo", "bar"]
+        assert match.contains is None
 
     def test_startswith_single(self):
         """Test startswith with single string."""
@@ -100,10 +96,10 @@ class TestStringMatchValidation:
         with pytest.raises(ValueError):
             StringMatch(startswith="prefix", endswith="suffix")
 
-    def test_contains_and_includes_conflict(self):
-        """Test that contains and includes cannot both be specified."""
+    def test_contains_and_contains_any_conflict(self):
+        """Test that contains and contains_any cannot both be specified."""
         with pytest.raises(ValueError):
-            StringMatch(contains="foo", includes="bar")
+            StringMatch(contains="foo", contains_any=["bar"])
 
     def test_semantic_requires_threshold(self):
         """Test that semantic similarity requires threshold."""
@@ -122,15 +118,3 @@ class TestStringMatchValidation:
 
         with pytest.raises(ValueError):
             StringMatch(similar="reference", threshold=-0.1)
-
-
-class TestStringMatchAliases:
-    """Test StringMatch alias handling."""
-
-    def test_includes_converted_to_contains(self):
-        """Test that includes is converted to contains field."""
-        match = StringMatch(includes="test")
-        # After validation, includes should be converted to contains
-        assert match.contains == "test"
-        # includes should not exist as a field value
-        assert not hasattr(match, "includes") or match.__dict__.get("includes") is None

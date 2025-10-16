@@ -120,8 +120,8 @@ class TestEvaluationConfig:
         assert isinstance(config.cases[0].output, StringMatch)
         assert config.cases[0].output.contains == "Paris"
 
-    def test_accuracy_with_stringmatch_multiple_contains(self):
-        """Test accuracy configuration with multiple contains values."""
+    def test_accuracy_with_stringmatch_contains_all(self):
+        """Test accuracy configuration with contains (ALL semantics)."""
         config = EvaluationConfig(
             name="test_accuracy",
             file_path="test_accuracy.toml",
@@ -132,6 +132,19 @@ class TestEvaluationConfig:
         )
         assert isinstance(config.cases[0].output, StringMatch)
         assert config.cases[0].output.contains == ["Paris", "France", "Europe"]
+
+    def test_accuracy_with_stringmatch_contains_any(self):
+        """Test accuracy configuration with contains_any (ANY semantics)."""
+        config = EvaluationConfig(
+            name="test_accuracy",
+            file_path="test_accuracy.toml",
+            description="Test accuracy",
+            type=EvaluationType.ACCURACY,
+            targets=EvaluationTargets(agents=["test_agent"]),
+            cases=[{"prompt": "Test prompt", "output": {"contains_any": ["Paris", "France", "Europe"]}}],
+        )
+        assert isinstance(config.cases[0].output, StringMatch)
+        assert config.cases[0].output.contains_any == ["Paris", "France", "Europe"]
 
     def test_accuracy_with_stringmatch_regex(self):
         """Test accuracy configuration with regex pattern matching."""
@@ -322,6 +335,9 @@ class TestTOMLParsing:
         # Verify dotted syntax is parsed correctly
         # Case 2 uses dotted syntax: output.contains = "capital"
         assert parsed.cases[2].output.contains == "capital"
+        # Case 3 and 4 use contains_any: output.contains_any = [...]
+        assert parsed.cases[3].output.contains_any == ["sunny", "cloudy", "rainy", "temperature"]
+        assert parsed.cases[4].output.contains_any == ["sunny", "cloudy", "rainy", "temperature"]
         # Case 5 uses dotted syntax: output.startswith = [...]
         assert parsed.cases[5].output.startswith == ["Hello", "Hi", "Hey"]
         # Case 6 uses dotted syntax: output.match = "..."

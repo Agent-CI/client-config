@@ -51,10 +51,15 @@ targets.tools = []
 prompt = "What is 2+2?"
 output = "4"
 
-# Substring containment - matches if output contains "Paris"
+# Substring containment - must contain "Paris"
 [[eval.cases]]
 prompt = "What is the capital of France?"
 output.contains = "Paris"
+
+# Multiple substrings - must contain ANY of these
+[[eval.cases]]
+prompt = "What is the capital of France?"
+output.contains_any = ["Paris", "France", "French capital"]
 
 # Semantic similarity - matches if semantically similar (>= 0.8)
 [[eval.cases]]
@@ -333,9 +338,9 @@ output.exact = "exact string"     # Explicit exact match
 
 **Substring Matching**:
 ```toml
-output.contains = "substring"              # Must contain text
-output.contains = ["foo", "bar"]           # Must contain ANY of the options
-output.includes = "substring"              # Alias for contains
+output.contains = "substring"              # Must contain this substring
+output.contains = ["foo", "bar"]           # Must contain ALL of these substrings
+output.contains_any = ["foo", "bar"]       # Must contain ANY of these substrings
 ```
 
 **Prefix/Suffix Matching**:
@@ -584,7 +589,7 @@ prompt = "Get API response"
 [eval.cases.output.schema]
 status = {
   type = "str",
-  value.contains = ["success", "ok"]
+  value.contains_any = ["success", "ok"]  # Status must contain ANY of these
 }
 code = {
   type = "int",
