@@ -173,6 +173,14 @@ class TestEvaluationConfig:
         assert config.cases[0].output.similar == "Paris is the capital"
         assert config.cases[0].output.threshold == 0.8
 
+    def test_accuracy_with_stringmatch_instance(self):
+        """Test accuracy configuration with output already as StringMatch instance."""
+        # When output is already a StringMatch object, it should be preserved
+        string_match = StringMatch(contains="Paris")
+        case = EvaluationCase(prompt="Test prompt", output=string_match)
+        assert isinstance(case.output, StringMatch)
+        assert case.output.contains == "Paris"
+
     def test_invalid_no_targets(self):
         """Test that config requires at least one target."""
         with pytest.raises(ValueError):

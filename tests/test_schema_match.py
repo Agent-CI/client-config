@@ -126,6 +126,14 @@ class TestSchemaField:
         assert "profile" in field.type["user"].type
         assert isinstance(field.type["user"].type["profile"].type, dict)
 
+    def test_field_without_type(self):
+        """Test SchemaField without type (nested object definition)."""
+        # When type is None, it's likely a nested object definition
+        # Validator should skip constraint validation in this case
+        field = SchemaField(required=False, default=None)
+        assert field.type is None
+        assert field.required is False
+
 
 class TestStringMatchWithSchema:
     """Test StringMatch with schema matching strategy."""
