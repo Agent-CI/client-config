@@ -1,6 +1,6 @@
 from __future__ import annotations
 from pathlib import Path
-import toml
+import tomllib
 
 from agentci.client_config import config
 from agentci.client_config.schema import EvaluationConfig
@@ -81,8 +81,8 @@ def parse_evaluation_config_toml(toml_path: Path, repository_path: Path) -> Eval
         >>> print(eval_config.file_path)  # '.agentci/evals/accuracy_test.toml'
     """
     try:
-        with open(toml_path, "r", encoding="utf-8") as f:
-            toml_data = toml.load(f)
+        with open(toml_path, "rb") as f:
+            toml_data = tomllib.load(f)
 
         if "eval" not in toml_data:
             raise ValueError(f"Missing 'eval' section in {toml_path}")
