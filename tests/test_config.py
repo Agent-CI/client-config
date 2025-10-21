@@ -8,7 +8,6 @@ from agentci.client_config.evals.schema import (
     EvaluationTargets,
     LatencyThreshold,
     EvaluationConfig,
-    EvaluationCase,
     StringMatch,
 )
 from agentci.client_config.evals.parser import parse_evaluation_config_toml
@@ -154,7 +153,9 @@ class TestEvaluationConfig:
             description="Test accuracy",
             type=EvaluationType.ACCURACY,
             targets=EvaluationTargets(agents=["test_agent"]),
-            cases=[{"prompt": "Test prompt", "output": {"similar": "Paris is the capital", "threshold": 0.8}}],
+            cases=[
+                {"prompt": "Test prompt", "output": {"similar": "Paris is the capital", "threshold": 0.8}}
+            ],
         )
         assert isinstance(config.cases[0].output, StringMatch)
         assert config.cases[0].output.similar == "Paris is the capital"

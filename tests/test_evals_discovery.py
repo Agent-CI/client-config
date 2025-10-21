@@ -158,6 +158,7 @@ output = "Expected"
 
         # Reload the config module to pick up the new env var
         import agentci.client_config._config
+
         importlib.reload(agentci.client_config._config)
 
         from agentci.client_config._config import config as custom_config
