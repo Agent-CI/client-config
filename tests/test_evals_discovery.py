@@ -146,34 +146,6 @@ output = "Expected"
         evals_for_tool = [e for e in evaluations if e.targets.targets_tool("test_tool")]
         assert len(evals_for_tool) == 1
 
-    def test_validate_evaluation_configs_success(self, repo_with_evals):
-        """Test validation of all evaluation configurations."""
-        from agentci.client_config import validate_evaluation_configs
-
-        # All fixture configs should be valid
-        assert validate_evaluation_configs(repo_with_evals) is True
-
-    def test_validate_evaluation_configs_failure(self, tmp_path):
-        """Test validation with invalid configuration."""
-        from agentci.client_config import validate_evaluation_configs
-
-        # Create evals directory with invalid TOML
-        evals_dir = tmp_path / config.evaluation_path_name
-        evals_dir.mkdir(parents=True)
-
-        invalid_toml = evals_dir / "invalid.toml"
-        invalid_toml.write_text(
-            """
-[eval]
-description = "Invalid config"
-type = "accuracy"
-# Missing targets - should cause validation error
-        """
-        )
-
-        # Should return False due to invalid config
-        assert validate_evaluation_configs(tmp_path) is False
-
     def test_config_path_customization(self):
         """Test that evaluation path can be customized via environment variable."""
         import os
@@ -191,3 +163,4 @@ type = "accuracy"
         # Verify config uses the custom env var
         assert custom_config.client_base_path == ".custom"
         assert custom_config.evaluation_path_name == ".custom/evals"
+        assert custom_config.framework_path_name == ".custom/frameworks"

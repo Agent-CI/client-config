@@ -1,56 +1,30 @@
-# AgentCI Evaluation Configuration Schema
+# AgentCI Client Config
 
-This document defines the TOML configuration schema for AgentCI evaluation implementations. This package also provides Python parsers and validators if you want to programmatically work with these configurations.
+Define evaluations and framework configurations for AI agent applications using simple TOML files.
 
-## Evaluation Types
+📚 **[Full Documentation](https://agent-ci.com/docs)** | 🚀 **[Getting Started](docs/guide/getting-started.md)** | 📖 **[TOML Schema Guides](docs/index.md)**
 
-The `eval.type` field determines which evaluation implementation will be used:
+## What is This?
 
-- **`accuracy`** - Tests if agent/tool outputs match expected results using exact matches, substring containment, or pattern matching. Supports return value validation and JSON schema validation for tools.
-- **`performance`** - Measures response time, latency, and resource usage metrics with configurable thresholds.
-- **`safety`** - Validates content filtering and security resistance. Supports built-in templates (prompt injection, harmful content, SQL injection, PII exposure, bias detection) or custom test cases.
-- **`consistency`** - Runs identical inputs multiple times to verify deterministic or low-variance outputs using semantic similarity. Essential for ensuring reliable agent behavior.
-- **`llm`** - Uses LLM-as-judge methodology with configurable scoring prompts and criteria for quality evaluation.
-- **`custom`** - Allows referencing custom Python evaluation modules for advanced evaluation capabilities beyond built-in types.
+AgentCI Client Config provides a TOML-based configuration format for:
 
-## Core Configuration Structure
+- **Evaluations**: Test cases for AI agents and tools with support for accuracy, performance, consistency, and safety testing
+- **Framework Configurations**: Patterns for discovering agents and tools in popular AI frameworks (LangChain, LlamaIndex, Pydantic AI)
 
-### Basic Evaluation
+## Quick Example
+
+Create evaluation configs in `.agentci/evals/`:
 
 ```toml
-# Basic evaluation metadata
+# .agentci/evals/test_accuracy.toml
 [eval]
-description = "Brief description"           # String: What this evaluation tests
-type = "accuracy"                          # Enum: accuracy|performance|safety|consistency|llm|custom
-targets.agents = ["*"]                     # Array[String]: Agent names ("*" = all, [] = none)
-targets.tools = []                         # Array[String]: Tool names ("*" = all, [] = none)
-iterations = 1                             # Integer: Number of times to execute each test case (default: 1)
-
-# Simple test cases with inline data
-[[eval.cases]]
-prompt = "Test prompt"                     # Optional: Input prompt string (for agents)
-context = { param1 = "value1" }           # Optional: Context object (agent context or tool parameters)
-output = "expected"                        # Expected output (exact match by default)
-```
-
-## Evaluation Types
-
-### 1. Accuracy Evaluation
-
-Tests if agent/tool outputs match expected results using various matching strategies. Can also validate tool usage patterns.
-
-```toml
-[eval]
-description = "Test response accuracy"
+description = "Test that the agent responds with correct information"
 type = "accuracy"
-targets.agents = ["*"]
-targets.tools = []
 
-# Exact string match (default)
-[[eval.cases]]
-prompt = "What is 2+2?"
-output = "4"
+[eval.targets]
+agents = ["my_agent"]
 
+<<<<<<< Updated upstream
 # Substring containment - matches if output contains "Paris"
 [[eval.cases]]
 prompt = "What is the capital of France?"
@@ -76,39 +50,30 @@ humidity = { type = "int" }
 [[eval.cases]]
 prompt = "What is 2+2?"
 tools = [{ name = "add", args = [2, 2] }]
+=======
+[[eval.cases]]
+prompt = "What is the capital of France?"
+expected.exact = "Paris"
+>>>>>>> Stashed changes
 ```
 
-See [Output Matching Strategies](#output-matching-strategies) for all available matching strategies (exact, contains, startswith, endswith, regex, semantic similarity) and [Schema Matching](#schema-matching) for comprehensive schema validation options.
-
-### 2. Performance Evaluation
-
-Tests response time and resource usage with configurable thresholds.
+Create framework configs in `.agentci/frameworks/`:
 
 ```toml
-[eval]
-description = "Test response performance"
-type = "performance"
-targets.agents = ["*"]
-targets.tools = []
+# .agentci/frameworks/my_framework.toml
+[framework]
+name = "my-framework"
+dependencies = ["my-framework"]
 
-# Simple latency test (milliseconds)
-[[eval.cases]]
-prompt = "Simple question"
-latency = { max_ms = 3000 }
-
-# Complex query with both latency and token limits (seconds default)
-[[eval.cases]]
-prompt = "Analyze this complex data and provide detailed insights"
-latency = { max = 15 }
-tokens = { max = 2000 }
-
-# Tool performance test with range requirements
-[[eval.cases]]
-context = { city = "San Francisco" }
-latency = { min_ms = 100, max_ms = 500 }
-tokens = { min = 50, max = 100 }
+[[agents]]
+path = "my_framework.Agent"
+args.model = "llm"
+args.prompt = "system_prompt"
+execution.method = "run"
+execution.args.prompt = "user_input"
 ```
 
+<<<<<<< Updated upstream
 ### 3. Safety Evaluation
 
 Tests for harmful or inappropriate content using built-in templates or custom test cases.
@@ -653,19 +618,57 @@ tools = [{ name = "add", args = { a = 2, b = 2 } }]
 ## Using the Library
 
 If you want to programmatically parse and validate these configurations:
+=======
+## Installation
+>>>>>>> Stashed changes
 
 ```bash
 pip install agentci-client-config
 ```
 
-```python
-from pathlib import Path
-from agentci.client_config import discover_evaluations
+## Documentation
 
-# Discover and parse all evaluations in a repository
-evaluations = discover_evaluations(Path("/path/to/repository"))
+For complete TOML schema documentation and guides:
 
-# Filter by target
-agent_evals = [e for e in evaluations if e.targets.targets_agent("my_agent")]
+- **[Getting Started](docs/guide/getting-started.md)** - Project setup and first configs
+- **[Evaluation Schema](docs/guide/evaluations.md)** - Complete guide to evaluation TOML format
+- **[Framework Schema](docs/guide/frameworks.md)** - Complete guide to framework TOML format
+- **[Python API](docs/python-api.md)** - Optional programmatic usage
+
+## Features
+
+### Evaluations
+
+- **Six evaluation types**: accuracy, performance, consistency, safety, llm, custom
+- **Flexible matching**: exact, contains, regex, semantic similarity
+- **Schema validation**: Validate structured JSON outputs
+- **Tool call validation**: Verify correct tool usage
+- **Multiple iterations**: Run tests multiple times for consistency
+
+### Frameworks
+
+- **Built-in support**: LangChain, LlamaIndex, Pydantic AI
+- **Custom frameworks**: Define your own discovery patterns
+- **Agent discovery**: Map framework parameters to standard fields
+- **Tool discovery**: Configure tool types (decorator, function, class, constructor)
+- **Execution config**: Define how to run agents and tools
+
+## Directory Structure
+
 ```
+your-project/
+├── .agentci/
+│   ├── evals/              # Evaluation configurations
+│   │   ├── accuracy.toml
+│   │   ├── performance.toml
+│   │   └── safety.toml
+│   └── frameworks/         # Framework configurations (optional)
+│       └── custom.toml
+├── src/
+└── tests/
+```
+
+## License
+
+MIT
 

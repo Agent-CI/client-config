@@ -17,5 +17,10 @@ class ClientConfig(BaseSettings):
     def evaluation_path_name(self) -> str:
         return f"{self.client_base_path}/evals"
 
+    @computed_field
+    @property
+    def framework_path_name(self) -> str:
+        return f"{self.client_base_path}/frameworks"
+
 
 config = ClientConfig()
