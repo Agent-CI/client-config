@@ -3,15 +3,15 @@
 import pytest
 from pathlib import Path
 
-from agentci.client_config import (
+from agentci.client_config.evals.schema import (
     EvaluationType,
     EvaluationTargets,
     LatencyThreshold,
     EvaluationConfig,
     EvaluationCase,
     StringMatch,
-    parse_evaluation_config_toml,
 )
+from agentci.client_config.evals.parser import parse_evaluation_config_toml
 
 
 class TestEvaluationTargets:

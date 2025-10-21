@@ -1,7 +1,7 @@
 """Tests for schema matching functionality."""
 
 import pytest
-from agentci.client_config import SchemaField, StringMatch
+from agentci.client_config.evals.schema import SchemaField, StringMatch
 
 
 class TestSchemaField:

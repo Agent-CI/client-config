@@ -3,7 +3,9 @@
 import pytest
 from pathlib import Path
 
-from agentci.client_config import discover_frameworks, AgentType, ToolType, config
+from agentci.client_config import config
+from agentci.client_config.frameworks.parser import discover_frameworks
+from agentci.client_config.frameworks.schema import AgentType, ToolType
 
 
 class TestFrameworkDiscovery:
@@ -190,7 +192,7 @@ execution.args.prompt = "user_input"
 
     def test_framework_execution_configs(self):
         """Test that execution configurations are valid."""
-        from agentci.client_config import AgentExecutionArgs
+        from agentci.client_config.frameworks.schema import AgentExecutionArgs
 
         frameworks = discover_frameworks()
 

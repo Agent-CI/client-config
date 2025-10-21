@@ -1,7 +1,7 @@
 """Tests for StringMatch schema."""
 
 import pytest
-from agentci.client_config import StringMatch
+from agentci.client_config.evals.schema import StringMatch
 
 
 class TestStringMatchCreation:

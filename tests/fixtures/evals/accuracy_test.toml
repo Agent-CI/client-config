@@ -22,12 +22,12 @@ output.contains = "capital"
 # Multiple substring options (inline) - matches if ANY are found
 [[eval.cases]]
 prompt = "Tell me the weather"
-output = { contains = ["sunny", "cloudy", "rainy", "temperature"] }
+output = { contains_any = ["sunny", "cloudy", "rainy", "temperature"] }
 
 # Multiple substring options (dotted) - matches if ANY are found
 [[eval.cases]]
 prompt = "Tell me the weather"
-output.contains = ["sunny", "cloudy", "rainy", "temperature"]
+output.contains_any = ["sunny", "cloudy", "rainy", "temperature"]
 
 # Prefix matching (dotted syntax)
 [[eval.cases]]
@@ -45,17 +45,17 @@ prompt = "What is the capital of France?"
 output.similar = "The capital city of France is Paris."
 output.threshold = 0.75
 
-# Tool evaluation with JSON schema validation
+# Tool evaluation with schema validation (TOML table format)
 [[eval.cases]]
 context = { city = "San Francisco", api_key = "test_key" }
-output_schema = """
-{
-  "type": "object",
-  "required": ["temperature", "condition", "humidity"],
-  "properties": {
-    "temperature": {"type": "number"},
-    "condition": {"type": "string"},
-    "humidity": {"type": "number", "minimum": 0, "maximum": 100}
-  }
-}
-"""
+
+[eval.cases.output.schema.temperature]
+type = "float"
+
+[eval.cases.output.schema.condition]
+type = "str"
+
+[eval.cases.output.schema.humidity]
+type = "int"
+min = 0
+max = 100

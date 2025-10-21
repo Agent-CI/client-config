@@ -3,7 +3,7 @@
 import pytest
 from pathlib import Path
 
-from agentci.client_config import (
+from agentci.client_config.frameworks.schema import (
     FrameworkConfig,
     AgentType,
     ToolType,
@@ -13,8 +13,8 @@ from agentci.client_config import (
     AgentDiscoveryArgs,
     AgentExecutionArgs,
     ExecutionConfig,
-    parse_framework_config_toml,
 )
+from agentci.client_config.frameworks.parser import parse_framework_config_toml
 
 
 class TestFrameworkMetadata:

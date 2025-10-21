@@ -3,7 +3,9 @@
 import pytest
 from pathlib import Path
 
-from agentci.client_config import discover_evaluations, EvaluationType, config
+from agentci.client_config import config
+from agentci.client_config.evals.parser import discover_evaluations
+from agentci.client_config.evals.schema import EvaluationType
 
 
 class TestEvaluationDiscovery:

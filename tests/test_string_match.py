@@ -1,7 +1,7 @@
 """Tests for StringMatch schema."""
 
 import pytest
-from agentci.client_config import StringMatch
+from agentci.client_config.evals.schema import StringMatch
 
 
 class TestStringMatchCreation:
@@ -27,17 +27,6 @@ class TestStringMatchCreation:
         """Test contains with multiple strings."""
         match = StringMatch(contains=["foo", "bar", "baz"])
         assert match.contains == ["foo", "bar", "baz"]
-
-    def test_includes_alias_single(self):
-        """Test includes alias with single string."""
-        match = StringMatch(includes="substring")
-        assert match.contains == "substring"
-        assert match.exact is None
-
-    def test_includes_alias_multiple(self):
-        """Test includes alias with multiple strings."""
-        match = StringMatch(includes=["foo", "bar"])
-        assert match.contains == ["foo", "bar"]
 
     def test_startswith_single(self):
         """Test startswith with single string."""
@@ -100,11 +89,6 @@ class TestStringMatchValidation:
         with pytest.raises(ValueError):
             StringMatch(startswith="prefix", endswith="suffix")
 
-    def test_contains_and_includes_conflict(self):
-        """Test that contains and includes cannot both be specified."""
-        with pytest.raises(ValueError):
-            StringMatch(contains="foo", includes="bar")
-
     def test_semantic_requires_threshold(self):
         """Test that semantic similarity requires threshold."""
         with pytest.raises(ValueError):
@@ -122,15 +106,3 @@ class TestStringMatchValidation:
 
         with pytest.raises(ValueError):
             StringMatch(similar="reference", threshold=-0.1)
-
-
-class TestStringMatchAliases:
-    """Test StringMatch alias handling."""
-
-    def test_includes_converted_to_contains(self):
-        """Test that includes is converted to contains field."""
-        match = StringMatch(includes="test")
-        # After validation, includes should be converted to contains
-        assert match.contains == "test"
-        # includes should not exist as a field value
-        assert not hasattr(match, "includes") or match.__dict__.get("includes") is None
