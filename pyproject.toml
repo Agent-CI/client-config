@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentci-client-config"
-version = "0.1.1"
+version = "0.1.2"
 description = "Client configuration for AgentCI"
 authors = [
     {name = "Agent CI", email = "hello@agent-ci.com"},
@@ -21,6 +21,11 @@ dependencies = [
 test = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
+]
+docs = [
+    "mkdocs>=1.5.0",
+    "mkdocs-material>=9.0.0",
+    "mkdocstrings[python]>=0.24.0",
 ]
 
 [tool.hatch.build.targets.wheel]

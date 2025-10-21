@@ -3,7 +3,7 @@ from pathlib import Path
 import tomllib
 
 from agentci.client_config import config
-from agentci.client_config.schema import EvaluationConfig
+from agentci.client_config.evals.schema import EvaluationConfig
 
 
 DISCOVER_EXTENSIONS: list[str] = [
@@ -35,22 +35,6 @@ def discover_evaluations(repository_path: Path) -> list[EvaluationConfig]:
             evaluations.append(parsed_eval)
 
     return evaluations
-
-
-def validate_evaluation_configs(repository_path: Path) -> bool:
-    """Validate all evaluation configurations in the repository.
-
-    Args:
-        repository_path: Root path of the repository.
-
-    Returns:
-        True if all evaluation configurations are valid, False otherwise.
-    """
-    try:
-        discover_evaluations(repository_path)
-        return True
-    except ValueError:
-        return False
 
 
 def parse_evaluation_config_toml(toml_path: Path, repository_path: Path) -> EvaluationConfig:

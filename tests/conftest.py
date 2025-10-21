@@ -1,7 +1,7 @@
 """Shared test fixtures for agentci-client-config tests."""
 
 import pytest
-from agentci.client_config import EvaluationCase
+from agentci.client_config.evals.schema import EvaluationCase
 
 
 @pytest.fixture

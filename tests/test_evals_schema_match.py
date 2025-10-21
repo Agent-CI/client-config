@@ -126,6 +126,14 @@ class TestSchemaField:
         assert "profile" in field.type["user"].type
         assert isinstance(field.type["user"].type["profile"].type, dict)
 
+    def test_field_without_type(self):
+        """Test SchemaField without type (nested object definition)."""
+        # When type is None, it's likely a nested object definition
+        # Validator should skip constraint validation in this case
+        field = SchemaField(required=False, default=None)
+        assert field.type is None
+        assert field.required is False
+
 
 class TestStringMatchWithSchema:
     """Test StringMatch with schema matching strategy."""
@@ -199,7 +207,9 @@ class TestStringMatchWithSchema:
 
     def test_schema_as_only_strategy(self):
         """Test that schema can be the only strategy."""
-        schema_match = StringMatch(schema={"field": SchemaField(type="str")})
+        schema_match = StringMatch(
+            schema={"field": SchemaField(type="str")}
+        )
         assert schema_match.schema is not None
         assert schema_match.exact is None
         assert schema_match.contains is None
@@ -217,26 +227,40 @@ class TestSchemaFieldValue:
 
     def test_substring_value(self):
         """Test substring matching on field value."""
-        field = SchemaField(type="str", value=StringMatch(contains="timeout"))
+        field = SchemaField(
+            type="str",
+            value=StringMatch(contains="timeout")
+        )
         assert field.value is not None
         assert field.value.contains == "timeout"
 
     def test_regex_value(self):
         """Test regex matching on field value."""
-        field = SchemaField(type="str", value=StringMatch(match=r"^\d{3}-\d{3}-\d{4}$"))
+        field = SchemaField(
+            type="str",
+            value=StringMatch(match=r"^\d{3}-\d{3}-\d{4}$")
+        )
         assert field.value is not None
         assert field.value.match == r"^\d{3}-\d{3}-\d{4}$"
 
     def test_semantic_similarity_value(self):
         """Test semantic similarity on field value."""
-        field = SchemaField(type="str", value=StringMatch(similar="Welcome!", threshold=0.8))
+        field = SchemaField(
+            type="str",
+            value=StringMatch(similar="Welcome!", threshold=0.8)
+        )
         assert field.value is not None
         assert field.value.similar == "Welcome!"
         assert field.value.threshold == 0.8
 
     def test_value_with_type_constraints(self):
         """Test combining value matching with type constraints."""
-        field = SchemaField(type="str", min_length=3, max_length=20, value=StringMatch(contains="test"))
+        field = SchemaField(
+            type="str",
+            min_length=3,
+            max_length=20,
+            value=StringMatch(contains="test")
+        )
         assert field.min_length == 3
         assert field.max_length == 20
         assert field.value.contains == "test"

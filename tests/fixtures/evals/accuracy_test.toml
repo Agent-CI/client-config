@@ -37,7 +37,7 @@ output.startswith = ["Hello", "Hi", "Hey"]
 # Regex matching (dotted syntax)
 [[eval.cases]]
 prompt = "Give me a phone number"
-output.match = "^\\d{3}-\\d{3}-\\d{4}$"
+output.match = '''^\d{3}-\d{3}-\d{4}$'''
 
 # Semantic similarity (dotted syntax)
 [[eval.cases]]
@@ -45,11 +45,17 @@ prompt = "What is the capital of France?"
 output.similar = "The capital city of France is Paris."
 output.threshold = 0.75
 
-# Tool evaluation with schema matching
+# Tool evaluation with schema validation (TOML table format)
 [[eval.cases]]
 context = { city = "San Francisco", api_key = "test_key" }
 
-[eval.cases.output.schema]
-temperature = { type = "float" }
-condition = { type = "str" }
-humidity = { type = "int", min = 0, max = 100 }
+[eval.cases.output.schema.temperature]
+type = "float"
+
+[eval.cases.output.schema.condition]
+type = "str"
+
+[eval.cases.output.schema.humidity]
+type = "int"
+min = 0
+max = 100

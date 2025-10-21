@@ -3,14 +3,15 @@
 import pytest
 from pathlib import Path
 
+from agentci.client_config.evals.parser import parse_evaluation_config_toml
 from agentci.client_config.evals.schema import (
     EvaluationType,
     EvaluationTargets,
     LatencyThreshold,
     EvaluationConfig,
+    EvaluationCase,
     StringMatch,
 )
-from agentci.client_config.evals.parser import parse_evaluation_config_toml
 
 
 class TestEvaluationTargets:
@@ -119,8 +120,8 @@ class TestEvaluationConfig:
         assert isinstance(config.cases[0].output, StringMatch)
         assert config.cases[0].output.contains == "Paris"
 
-    def test_accuracy_with_stringmatch_multiple_contains(self):
-        """Test accuracy configuration with multiple contains values."""
+    def test_accuracy_with_stringmatch_contains_all(self):
+        """Test accuracy configuration with contains (ALL semantics)."""
         config = EvaluationConfig(
             name="test_accuracy",
             file_path="test_accuracy.toml",
@@ -131,6 +132,19 @@ class TestEvaluationConfig:
         )
         assert isinstance(config.cases[0].output, StringMatch)
         assert config.cases[0].output.contains == ["Paris", "France", "Europe"]
+
+    def test_accuracy_with_stringmatch_contains_any(self):
+        """Test accuracy configuration with contains_any (ANY semantics)."""
+        config = EvaluationConfig(
+            name="test_accuracy",
+            file_path="test_accuracy.toml",
+            description="Test accuracy",
+            type=EvaluationType.ACCURACY,
+            targets=EvaluationTargets(agents=["test_agent"]),
+            cases=[{"prompt": "Test prompt", "output": {"contains_any": ["Paris", "France", "Europe"]}}],
+        )
+        assert isinstance(config.cases[0].output, StringMatch)
+        assert config.cases[0].output.contains_any == ["Paris", "France", "Europe"]
 
     def test_accuracy_with_stringmatch_regex(self):
         """Test accuracy configuration with regex pattern matching."""
@@ -153,13 +167,19 @@ class TestEvaluationConfig:
             description="Test accuracy",
             type=EvaluationType.ACCURACY,
             targets=EvaluationTargets(agents=["test_agent"]),
-            cases=[
-                {"prompt": "Test prompt", "output": {"similar": "Paris is the capital", "threshold": 0.8}}
-            ],
+            cases=[{"prompt": "Test prompt", "output": {"similar": "Paris is the capital", "threshold": 0.8}}],
         )
         assert isinstance(config.cases[0].output, StringMatch)
         assert config.cases[0].output.similar == "Paris is the capital"
         assert config.cases[0].output.threshold == 0.8
+
+    def test_accuracy_with_stringmatch_instance(self):
+        """Test accuracy configuration with output already as StringMatch instance."""
+        # When output is already a StringMatch object, it should be preserved
+        string_match = StringMatch(contains="Paris")
+        case = EvaluationCase(prompt="Test prompt", output=string_match)
+        assert isinstance(case.output, StringMatch)
+        assert case.output.contains == "Paris"
 
     def test_invalid_no_targets(self):
         """Test that config requires at least one target."""
@@ -323,6 +343,9 @@ class TestTOMLParsing:
         # Verify dotted syntax is parsed correctly
         # Case 2 uses dotted syntax: output.contains = "capital"
         assert parsed.cases[2].output.contains == "capital"
+        # Case 3 and 4 use contains_any: output.contains_any = [...]
+        assert parsed.cases[3].output.contains_any == ["sunny", "cloudy", "rainy", "temperature"]
+        assert parsed.cases[4].output.contains_any == ["sunny", "cloudy", "rainy", "temperature"]
         # Case 5 uses dotted syntax: output.startswith = [...]
         assert parsed.cases[5].output.startswith == ["Hello", "Hi", "Hey"]
         # Case 6 uses dotted syntax: output.match = "..."
@@ -330,6 +353,19 @@ class TestTOMLParsing:
         # Case 7 uses dotted syntax: output.similar + output.threshold
         assert parsed.cases[7].output.similar == "The capital city of France is Paris."
         assert parsed.cases[7].output.threshold == 0.75
+
+        # Case 8 uses nested table syntax: [eval.cases.output.schema]
+        assert isinstance(parsed.cases[8].output, StringMatch)
+        assert parsed.cases[8].output.schema is not None
+        assert len(parsed.cases[8].output.schema) == 3
+        assert "temperature" in parsed.cases[8].output.schema
+        assert "condition" in parsed.cases[8].output.schema
+        assert "humidity" in parsed.cases[8].output.schema
+        assert parsed.cases[8].output.schema["temperature"].type == "float"
+        assert parsed.cases[8].output.schema["condition"].type == "str"
+        assert parsed.cases[8].output.schema["humidity"].type == "int"
+        assert parsed.cases[8].output.schema["humidity"].min == 0
+        assert parsed.cases[8].output.schema["humidity"].max == 100
 
     def test_parse_performance_toml(self, fixtures_path):
         """Test parsing performance evaluation TOML with time normalization."""
