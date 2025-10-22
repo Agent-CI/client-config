@@ -9,7 +9,7 @@ Define evaluations and framework configurations for AI agent applications using 
 AgentCI Client Config provides a TOML-based configuration format for:
 
 - **Evaluations**: Test cases for AI agents and tools with support for accuracy, performance, consistency, and safety testing
-- **Framework Configurations**: Patterns for discovering agents and tools in popular AI frameworks (LangChain, LlamaIndex, Pydantic AI)
+- **Framework Configurations**: Patterns for discovering agents and tools in popular AI frameworks (LangChain, LlamaIndex, Pydantic AI, OpenAI, Google ADK, Agno)
 
 ## Quick Example
 
@@ -72,7 +72,7 @@ For complete TOML schema documentation and guides:
 
 ### Frameworks
 
-- **Built-in support**: LangChain, LlamaIndex, Pydantic AI
+- **Built-in support**: LangChain, LlamaIndex, Pydantic AI, OpenAI Agents, Google ADK, Agno
 - **Custom frameworks**: Define your own discovery patterns
 - **Agent discovery**: Map framework parameters to standard fields
 - **Tool discovery**: Configure tool types (decorator, function, class, constructor)

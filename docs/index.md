@@ -61,7 +61,7 @@ Evaluation TOML files define test cases for agents and tools:
 
 Framework TOML files define agent and tool discovery patterns:
 
-- **Built-in Frameworks**: LangChain, LlamaIndex, Pydantic AI
+- **Built-in Frameworks**: LangChain, LlamaIndex, Pydantic AI, OpenAI Agents, Google ADK, Agno
 - **Custom Frameworks**: Define your own patterns
 - **Agent Discovery**: Map framework parameters to standard fields
 - **Tool Discovery**: Configure tool types (decorator, function, class, constructor)
