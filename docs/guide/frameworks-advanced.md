@@ -311,6 +311,17 @@ Discovery finds all public functions (names not starting with `_`) in files that
 
 Executes as: `search(query="...")` and `calculate(expression="...")`
 
+## Built-in Framework Examples
+
+AgentCI includes built-in configurations for several popular frameworks. See the actual configuration files in `src/agentci/client_config/frameworks/configs/` for complete details:
+
+- **`langchain.toml`** - Multiple agent types, decorator/constructor/class tools
+- **`llamaindex.toml`** - Query engines, agents, function tools
+- **`pydantic_ai.toml`** - Agent constructors, function tools
+- **`openai_agents.toml`** - Assistants API pattern, function calling
+- **`google_adk.toml`** - Multiple agent types, FunctionTool wrapper, uses `instruction` parameter
+- **`agno.toml`** - Agent with `print_response` method, `@tool` decorator, Toolkit base class
+
 ## Practical Workflow: Creating a Custom Framework Config
 
 Let's walk through creating a framework config for a hypothetical custom framework.

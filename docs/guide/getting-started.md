@@ -232,4 +232,4 @@ Now that you've created your first evaluation, explore detailed guides for each 
 - **[Python API](../python-api.md)** - Programmatic usage (optional)
 
 ### Advanced Topics
-- **[Framework Configuration](frameworks.md)** - Only needed if you're using a custom framework not already supported (LangChain, LlamaIndex, and Pydantic AI are built-in)
+- **[Framework Configuration](frameworks.md)** - Only needed if you're using a custom framework not already supported (LangChain, LlamaIndex, Pydantic AI, OpenAI Agents, Google ADK, and Agno are built-in)

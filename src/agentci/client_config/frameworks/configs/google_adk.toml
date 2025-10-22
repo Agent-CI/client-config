@@ -1,0 +1,33 @@
+[framework]
+name = "google-adk"
+dependencies = ["google-adk", "google.adk"]
+
+# Agent Discovery + Execution
+[[agents]]
+path = "google.adk.agents.Agent"
+type = "constructor"
+args.model = "model"
+args.prompt = "instruction"
+args.tools = "tools"
+execution.method = "run"
+
+[[agents]]
+path = "google.adk.agents.llm_agent.LlmAgent"
+type = "constructor"
+args.model = "model"
+args.prompt = "instruction"
+args.tools = "tools"
+execution.method = "run"
+
+# Tool Discovery + Execution
+
+# FunctionTool wrapper (explicit tool class)
+[[tools]]
+type = "constructor"
+path = "google.adk.tools.FunctionTool"
+execution.method = "__call__"
+
+# Plain functions (auto-wrapped by framework)
+[[tools]]
+type = "function"
+execution.method = "__call__"

@@ -1,0 +1,31 @@
+[framework]
+name = "agno"
+dependencies = ["agno"]
+
+# Agent Discovery + Execution
+[[agents]]
+path = "agno.agent.Agent"
+type = "constructor"
+args.model = "model"
+args.prompt = "instructions"
+args.tools = "tools"
+execution.method = "print_response"
+
+# Tool Discovery + Execution
+
+# @tool decorator
+[[tools]]
+type = "decorator"
+path = "agno.tools.tool"
+execution.method = "__call__"
+
+# Toolkit base class
+[[tools]]
+type = "class"
+path = "agno.tools.Toolkit"
+execution.method = "__call__"
+
+# Plain functions used directly in agents
+[[tools]]
+type = "function"
+execution.method = "__call__"

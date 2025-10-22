@@ -8,6 +8,9 @@ AgentCI includes built-in configurations for:
 - **LangChain** (`langchain.toml`)
 - **LlamaIndex** (`llamaindex.toml`)
 - **Pydantic AI** (`pydantic_ai.toml`)
+- **OpenAI Agents** (`openai_agents.toml`)
+- **Google ADK** (`google_adk.toml`)
+- **Agno** (`agno.toml`)
 
 You can create custom framework configurations or override built-in ones by placing TOML files in `.agentci/frameworks/`.
 
